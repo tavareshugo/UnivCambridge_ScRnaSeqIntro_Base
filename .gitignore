@@ -1,0 +1,8 @@
+# RStudio files
+.Rhistory
+.Rproj.user
+*.Rproj
+.Rbuildignore
+
+# VS Code workspace file
+*.code-workspace
