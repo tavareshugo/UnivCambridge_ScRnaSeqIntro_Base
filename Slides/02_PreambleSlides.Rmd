@@ -1,7 +1,7 @@
 ---
 title: "Introduction to single-cell RNA-seq analysis - Data sets and analyses"
 author: "Stephane Ballereau"
-date: "Nov 2021"
+date: "Feb 2022"
 output:
   ioslides_presentation:
     logo: ../Images/uniOfCamCrukLogos.png
@@ -31,25 +31,16 @@ output:
 
 ## Samples
 
-Four types of sample are considered:
-
-<!--
-* eight patients:
-  * six B-ALL
-    * four 't(12;21)' or 'ETV6-RUNX1'
-    * two 'High hyper diploid' or 'HHD'
-  * two T-ALL ('PRE-T')
-* three healthy pediatric controls
-* eight healthy adult controls, publicly available
--->
+Five types of sample are considered:
 
 * B-ALL patients:
-  * four 't(12;21)' or **'ETV6-RUNX1'**
-  * two 'High hyper diploid' or **'HHD'**
+  * **'ETV6-RUNX1'**, or 't(12;21)', four patients 
+  * **'HHD'**, or 'High hyper diploid', two patients
 * T-ALL patients
-  * two **'PRE-T'**
-* three **healthy pediatric controls**
-* eight **healthy adult controls**, publicly available
+  * **'PRE-T'**, two patients
+* Healthy controls,
+  * **Healthy pediatric controls**, three individuals
+  * **Healthy adult controls**, eight individuals (HCA)
 
 As the study aims at identifying cell populations, large numbers of cells were sequenced with the droplet-based 10x Chromium assay.
 
@@ -73,4 +64,61 @@ We will follow several steps:
 ```{r echo=FALSE, out.width='60%', fig.align='center'}
 knitr::include_graphics('Images/workflow2.png')
 ```
+
+## Workflow
+
+```{r echo=FALSE, out.width='60%', fig.align='center'}
+knitr::include_graphics('Images/workflow2_QC.png')
+```
+
+## Workflow
+
+```{r echo=FALSE, out.width='60%', fig.align='center'}
+knitr::include_graphics('Images/workflow2_normalisation.png')
+```
+
+## Workflow
+
+```{r echo=FALSE, out.width='60%', fig.align='center'}
+knitr::include_graphics('Images/workflow2_featSelec.png')
+```
+
+## Workflow
+
+```{r echo=FALSE, out.width='60%', fig.align='center'}
+knitr::include_graphics('Images/workflow2_dimensReduc.png')
+```
+
+## Workflow
+
+```{r echo=FALSE, out.width='60%', fig.align='center'}
+knitr::include_graphics('Images/workflow2_dataSetIntegra.png')
+```
+
+## Workflow
+
+```{r echo=FALSE, out.width='60%', fig.align='center'}
+knitr::include_graphics('Images/workflow2_clustering.png')
+```
+
+## Workflow
+
+```{r echo=FALSE, out.width='60%', fig.align='center'}
+knitr::include_graphics('Images/workflow2_cluMarkerGenes.png')
+```
+
+## Workflow
+
+```{r echo=FALSE, out.width='60%', fig.align='center'}
+knitr::include_graphics('Images/workflow2_diffExpre.png')
+```
+
+## Workflow
+
+```{r echo=FALSE, out.width='60%', fig.align='center'}
+knitr::include_graphics('Images/workflow2_diffAbund.png')
+```
+
+
+
 
