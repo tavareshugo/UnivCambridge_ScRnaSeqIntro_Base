@@ -1,7 +1,7 @@
 ---
 title: "Introduction to single-cell RNA-seq analysis - Normalisation"
 author: "Stephane Ballereau"
-date: "November 2021"
+date: "February 2022"
 output:
   ioslides_presentation:
     logo: ../Images/uniOfCamCrukLogos.png
@@ -57,7 +57,7 @@ Normalisation addresses technical differences only, while batch correction
 considers both technical and biological differences.
 
 Sources: chapters on normalisation in the
-[OSCA book](https://bioconductor.org/books/release/OSCA/normalization.html), the
+[OSCA book](http://bioconductor.org/books/3.14/OSCA.basic/normalization.html), the
 [Hemberg group materials](https://scrnaseq-course.cog.sanger.ac.uk/website/index.html) and [sctransform](https://github.com/ChristophH/sctransform).
 
 ## Initial methods
