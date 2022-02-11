@@ -1,7 +1,7 @@
 ---
 title: "Data Integration and Batch Correction"
 author: "Abbi Edwards"
-date: "26th July 2021"
+date: "11th February 2022"
 output:
   ioslides_presentation:
     css: css/stylesheet.css
@@ -21,7 +21,7 @@ library(dplyr)
 
 <img src="../Images/workflow.svg" class="center" style="width: 70%; margin-top: 40px;">
 
-## Why do we need to think about data intergration?
+## Why do we need to think about data integration?
 
 - Practicalities of our Experimental Design
 
@@ -110,5 +110,5 @@ The value in batch correction is that it enables you to see population heterogen
   
 However the corrected values should not be used for gene based analysis eg. DE/marker detection.
 
-  - fastMNN doesn't preserve the magnitude or direction of per-gene expression and may have introduced artifical agreement between batches on the gene level.
+  - fastMNN doesn't preserve the magnitude or direction of per-gene expression and may have introduced artificial agreement between batches on the gene level.
 
