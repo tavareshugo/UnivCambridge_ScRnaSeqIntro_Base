@@ -281,8 +281,6 @@ summary(lib.sf)
 Size factor distribution: wide range, typical of scRNA-seq data.
 
 ```{r librarySizeFactors_hist_norm_Caron_5hCellPerSpl}
-#hist(log10(lib.sf), xlab="Log10[Size factor]", col='grey80')
-
 dd <- data.frame("log10libSf"=log10(lib.sf))
 ggplot(dd, aes(x=log10libSf)) + 
   geom_histogram(bins=50)
@@ -373,13 +371,6 @@ deconvDf <- data.frame(lib.sf, deconv.sf,
 ```{r scatter_deconvSf_libSf_colBy_sourceName_plot_norm_Caron_5hCellPerSpl}
 # colour by sample type
 sp <- ggplot(deconvDf, aes(x=lib.sf, y=deconv.sf, col=source_name)) +
-  geom_point()
-sp
-```
-
-```{r scatter_deconvSf_libSf_colBy_cellSpars_norm_Caron_allCells}
-# colour by cell sparsity
-sp <- ggplot(deconvDf, aes(x=lib.sf, y=deconv.sf, col=cell_sparsity)) +
   geom_point()
 sp
 ```
