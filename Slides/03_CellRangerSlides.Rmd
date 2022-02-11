@@ -1,7 +1,7 @@
 ---
 title: "Alignment and feature counting"
 author: "Ashley Sawle, Stephane Ballereau"
-date: 'Nov 2021'
+date: 'February 2022'
 output:
   ioslides_presentation:
     widescreen: true
@@ -9,7 +9,6 @@ output:
     logo: Images/uniOfCamCrukLogos.png
     css: css/stylesheet.css
 ---
-
 
 ## Single Cell RNAseq Analysis Workflow
 
