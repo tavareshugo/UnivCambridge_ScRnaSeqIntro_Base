@@ -49,20 +49,20 @@ library(Cairo)
 Load object 
 
 ```{r GSM3872442_readIn}
-sce <- readRDS("~/Downloads/caron_sce_nz_postQc.Rds")
+sce <- readRDS("../Robjects/postQC_caron_allcells.rds")
 ```
 
 Select the GSM3872442 cells:
 
 ```{r subset_cells_batch_GSM3872442, eval=FALSE}
-sample1.nz.sce <- SingleCellExperiment(list(counts=counts(sce[, sce$Run %in% c("SRR9264351")])),
-                                       colData=colData(sce[, sce$Run %in% c("SRR9264351")]))
+sample1.nz.sce <- SingleCellExperiment(list(counts=counts(sce[, sce$SampleId %in% c("SRR9264351")])),
+                                       colData=colData(sce[, sce$SampleId %in% c("SRR9264351")]))
 
-sample2.nz.sce <- SingleCellExperiment(list(counts=counts(sce[, sce$Run %in% c("SRR9264352")])),
-                                       colData=colData(sce[, sce$Run %in% c("SRR9264352")]))
+sample2.nz.sce <- SingleCellExperiment(list(counts=counts(sce[, sce$SampleId %in% c("SRR9264352")])),
+                                       colData=colData(sce[, sce$SampleId %in% c("SRR9264352")]))
 
-saveRDS(sample1.nz.sce, "Robjects/BC_sample1.rds")
-saveRDS(sample2.nz.sce, "Robjects/BC_sample2.rds")
+saveRDS(sample1.nz.sce, "../Robjects/BC_sample1.rds")
+saveRDS(sample2.nz.sce, "../Robjects/BC_sample2.rds")
 ```
 The above two code chunks just illustrate how the starting demonstration files for this chapter were made, if you are working from our github repo you will not need this. if you are testing batch corrections on your own samples, for this first part, read in each sample as a separate sce object.
 
