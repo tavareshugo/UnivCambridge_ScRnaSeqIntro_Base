@@ -28,7 +28,7 @@ set.seed(123) # for reproducibility
 ```
 
 Sources: chapters on normalisation in the
-[OSCA book](https://osca.bioconductor.org/normalization.html) and the
+[OSCA book](http://bioconductor.org/books/3.14/OSCA.basic/normalization.html) and the
 [Hemberg group materials](https://scrnaseq-course.cog.sanger.ac.uk/website/index.html).
 
 ## Learning objectives
