@@ -404,7 +404,7 @@ ggplot(dd, aes(x=log10libSf)) +
 </div>
 <div id="deconvolution" class="section level3" number="1.4.5">
 <h3 number="1.4.5"><span class="header-section-number">1.4.5</span> Deconvolution</h3>
-<p>Composition bias occurs when differential expression beteween two samples or here cells is not balanced. For a fixed library size, identical in both cells, upregulation of one gene in a cell will means fewer UMIs can be assigned to other genes, which would then appear down regulated. Even if library sizes are allowed to differ, with that for the cell with upregulation being higher, scaling normalisation will reduce normalised counts. Non-upregulated would therefore also appear downregulated.</p>
+<p>Composition bias occurs when differential expression between two samples or here cells is not balanced. For a fixed library size, identical in both cells, upregulation of one gene in a cell will means fewer UMIs can be assigned to other genes, which would then appear down regulated. Even if library sizes are allowed to differ, with that for the cell with upregulation being higher, scaling normalisation will reduce normalised counts. Non-upregulated would therefore also appear downregulated.</p>
 <p>For bulk RNA-seq, composition bias is removed by assuming that most genes are not differentially expressed between samples, so that differences in non-DE genes would amount to the bias, and used to compute size factors.</p>
 <p>Given the sparsity of scRNA-seq data, the methods are not appropriate.</p>
 <p>The method below increases read counts by pooling cells into groups, computing size factors within each of these groups and scaling them so they are comparable across clusters. This process is repeated many times, changing pools each time to collect several size factors for each cell, from which is derived a single value for that cell.</p>
@@ -440,14 +440,10 @@ summary(deconv.sf)</code></pre>
 <p>Plot deconvolution size factors against library size factors:</p>
 <pre class="r"><code>sce &lt;- addPerFeatureQC(sce, BPPARAM = bpp) # PATCH
 
-colData(sce)$cell_sparsity &lt;- 1 - (colData(sce)$detected / nrow(sce))
-rowData(sce)$gene_sparsity &lt;- (100 - rowData(sce)$detected) / 100
-
 deconvDf &lt;- data.frame(lib.sf, deconv.sf,
             &quot;source_name&quot; = sce$SampleGroup,
             &quot;sum&quot; = sce$sum,
-            &quot;mito_content&quot; = sce$subsets_Mito_percent,
-            &quot;cell_sparsity&quot; = sce$cell_sparsity)</code></pre>
+            &quot;mito_content&quot; = sce$subsets_Mito_percent)</code></pre>
 <pre class="r"><code># colour by sample type
 sp &lt;- ggplot(deconvDf, aes(x=lib.sf, y=deconv.sf, col=source_name)) +
   geom_point()
@@ -555,7 +551,7 @@ rownames(cell_attr) &lt;- colnames(counts)</code></pre>
 </div>
 <div id="mean-variance-relationship" class="section level4" number="1.6.1.4">
 <h4 number="1.6.1.4"><span class="header-section-number">1.6.1.4</span> Mean-variance relationship</h4>
-<p>For the genes, on the log10 scale we can see that up to a mean UMI count of 0 the variance follows the line through the origin with slop one, i.e. variance and mean are roughly equal as expected under a Poisson model. However, genes with a higher average UMI count show overdispersion compared to Poisson.</p>
+<p>For the genes, on the log10 scale we can see that up to a mean UMI count of 0 the variance follows the line through the origin with slope one, i.e. variance and mean are roughly equal as expected under a Poisson model. However, genes with a higher average UMI count show overdispersion compared to Poisson.</p>
 <pre class="r"><code>ggplot(gene_attr, aes(log_mean, log_var)) + 
   geom_point(alpha=0.3, shape=16) + 
   geom_density_2d(size = 0.3) +
@@ -577,7 +573,7 @@ ggplot(gene_attr, aes(log_mean, detection_rate)) +
 </div>
 <div id="cells-attributes" class="section level4" number="1.6.1.6">
 <h4 number="1.6.1.6"><span class="header-section-number">1.6.1.6</span> Cells attributes</h4>
-<p>The plot below show the relationship between the to cell attributes computed: library size (n_umi) and number of genes detected (n_gene).</p>
+<p>The plot below shows the relationship between the two cell attributes computed: library size (n_umi) and number of genes detected (n_gene).</p>
 <pre class="r"><code>ggplot(cell_attr, aes(n_umi, n_gene)) + 
   geom_point(alpha=0.3, shape=16) + 
   geom_density_2d(size = 0.3)</code></pre>
@@ -609,7 +605,7 @@ ggplot(gene_attr, aes(log_mean, detection_rate)) +
 </div>
 <div id="estimation-and-transformation" class="section level4" number="1.6.2.2">
 <h4 number="1.6.2.2"><span class="header-section-number">1.6.2.2</span> Estimation and transformation</h4>
-<p>We will now estimate model parameters and transform data</p>
+<p>We will now estimate model parameters and transform data.</p>
 <p>The <code>vst</code> function estimates model parameters and performs the variance stabilizing transformation.</p>
 <p>Here we use the log10 of the total UMI counts of a cell as variable for sequencing depth for each cell. After data transformation we plot the model parameters as a function of gene mean (geometric mean).</p>
 <pre class="r"><code>print(dim(counts))</code></pre>

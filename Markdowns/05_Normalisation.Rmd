@@ -297,7 +297,7 @@ genes.
 
 ### Deconvolution
 
-Composition bias occurs when differential expression beteween two samples
+Composition bias occurs when differential expression between two samples
 or here cells is not balanced. For a fixed library size, identical in both cells,
 upregulation of one gene in a cell will means fewer UMIs can be assigned to other
 genes, which would then appear down regulated. Even if library sizes are allowed
@@ -358,14 +358,10 @@ Plot deconvolution size factors against library size factors:
 ```{r scatter_deconvSf_libSf_colBy_plot_norm_Caron_5hCellPerSpl}
 sce <- addPerFeatureQC(sce, BPPARAM = bpp) # PATCH
 
-colData(sce)$cell_sparsity <- 1 - (colData(sce)$detected / nrow(sce))
-rowData(sce)$gene_sparsity <- (100 - rowData(sce)$detected) / 100
-
 deconvDf <- data.frame(lib.sf, deconv.sf,
 			"source_name" = sce$SampleGroup,
 			"sum" = sce$sum,
-			"mito_content" = sce$subsets_Mito_percent,
-			"cell_sparsity" = sce$cell_sparsity)
+			"mito_content" = sce$subsets_Mito_percent)
 ```
 
 ```{r scatter_deconvSf_libSf_colBy_sourceName_plot_norm_Caron_5hCellPerSpl}
@@ -483,7 +479,7 @@ head(cell_attr)
 #### Mean-variance relationship
 
 For the genes, on the log10 scale we can see that up to a mean UMI count of 0
-the variance follows the line through the origin with slop one,
+the variance follows the line through the origin with slope one,
 i.e. variance and mean are roughly equal as expected under a Poisson model.
 However, genes with a higher average UMI count show overdispersion compared to Poisson.
 
@@ -515,7 +511,7 @@ ggplot(gene_attr, aes(log_mean, detection_rate)) +
 
 #### Cells attributes
 
-The plot below show the relationship between the to cell attributes computed: library size (n_umi) and number of genes detected (n_gene).
+The plot below shows the relationship between the two cell attributes computed: library size (n_umi) and number of genes detected (n_gene).
 
 ```{r scatter_nGene_nUmi_sct_Caron_5hCellPerSpl}
 ggplot(cell_attr, aes(n_umi, n_gene)) + 
@@ -563,7 +559,7 @@ Outcome:
 
 #### Estimation and transformation
 
-We will now estimate model parameters and transform data
+We will now estimate model parameters and transform data.
 
 The `vst` function estimates model parameters and performs the variance stabilizing
 transformation.
