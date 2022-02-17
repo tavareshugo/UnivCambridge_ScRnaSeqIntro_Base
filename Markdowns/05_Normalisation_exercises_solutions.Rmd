@@ -106,7 +106,7 @@ table(clust)
 ```{r calculateSumFactors_norm_GSM3872434_allCells}
 # deconvolve
 sce <- computePooledFactors(sce, cluster=clust, min.mean=0.1)
-# set size factors
+# get size factors
 deconv.sf <- sizeFactors(sce)
 # size factors distribution summary
 summary(deconv.sf)
