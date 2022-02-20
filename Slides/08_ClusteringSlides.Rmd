@@ -1,7 +1,7 @@
 ---
 title: "Introduction to single-cell RNA-seq analysis - Clustering"
 author: "Stephane Ballereau"
-date: "November 2021"
+date: "February 2022"
 output:
   ioslides_presentation:
     logo: ../Images/uniOfCamCrukLogos.png
