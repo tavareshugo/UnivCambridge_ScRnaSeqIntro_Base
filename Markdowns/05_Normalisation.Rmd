@@ -64,7 +64,7 @@ considers both technical and biological differences.
 
 <!-- PARAMS and LIBRARIES -->
 
-```{r Caron_libraries_norm, include=FALSE, results='hide', message=FALSE, warning=FALSE}
+```{r Caron_libraries_norm, results='hide', message=FALSE, warning=FALSE}
 library(scater)
 library(scran)
 library(scuttle)
@@ -297,7 +297,7 @@ genes.
 
 ### Deconvolution
 
-Composition bias occurs when differential expression beteween two samples
+Composition bias occurs when differential expression between two samples
 or here cells is not balanced. For a fixed library size, identical in both cells,
 upregulation of one gene in a cell will means fewer UMIs can be assigned to other
 genes, which would then appear down regulated. Even if library sizes are allowed
