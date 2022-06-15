@@ -27,7 +27,7 @@ for each "read".
 * **insert** - the transcript molecule
 
 ```{r echo=FALSE, out.width='60%', fig.align='center'}
-knitr::include_graphics('Images/tenxLibStructureV3.png')
+knitr::include_graphics('Images/tenxLibStructureV3dual2.png')
 ```
 
 ## Raw fastq files
@@ -41,7 +41,7 @@ files:
 * **R2**: insert sequence
 
 ```{r echo=FALSE, out.width='60%', fig.align='center'}
-knitr::include_graphics('Images/tenxLibStructureV3dual.png')
+knitr::include_graphics('Images/tenxLibStructureV3dual2.png')
 ```
 
 ## QC of Raw Reads - FASTQC
