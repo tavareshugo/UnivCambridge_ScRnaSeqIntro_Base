@@ -22,7 +22,7 @@ set.seed(123)
 
 # Introduction
 
-In the course materials we performed QC and filtering of 2 samples from each
+In the course materials we performed QC and filtering of 1 sample from each
 of the sample groups. For this challenge we would like you to perform QC and 
 filtering on all of the samples from the Caron data set. 
 
