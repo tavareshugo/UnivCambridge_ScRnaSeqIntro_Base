@@ -1,8 +1,8 @@
 ---
 title: Introduction to single-cell RNA-seq analysis
 subtitle: Quality Control
-author: "Ashley Sawle"
-date: '29th October 2021'
+author: "Chandra Chilamakuri, Ashley Sawle"
+date: '15th June 2022'
 output:
   ioslides_presentation:
     keep_md: true
@@ -33,35 +33,42 @@ options(max.print = 2000)
 knitr::include_graphics('Images/workflow2_QC.png')
 ```
 
-## Quality Control
+
+## 10x overview
+
+<div style="width: 75%; float: top; padding-left: 10%; padding-top: 10%">
+<img src="Images/10x_overview.jpg" class="centerimg" style="width: 95%">
+</div>
+
+<div style="width: 100%; float: bottom; padding-top: 20%">
+Image source: https://web.genewiz.com/single-cell-faq
+</div>
+
+
+## Not every droplet is useble
+
+```{r echo=FALSE, out.width='100%', fig.align='center', out.height='80%'}
+knitr::include_graphics('Images/droplet_overview.png')
+```
+
+## Quality Control overview
 
 <div style="width: 55%; float: left;">
+* Aim of QC
+  * To remove undetected genes
+  * To remove empty droplets
+  * To remove droplets with dead cells
+  * To remove Doublet/multiplet
 
-We will now:
+* Above is achieved by ...
 
-* Check the distribution of key quality metrics.
-* Filter out genes that are not expressed in any cell
-* Identify low-quality cells
-* Filter and/or mark low quality cells
+  * Applying hard cut-off or soft cut-off on ...
+    * Number of genes detected per cell
+    * Percent of mitochondrial genes per cell
+    * Number of UMIs/transcripts detected per cell
     
 </div>
 
-## Quality Control
-
-<div style="width: 55%; float: left;">
-
-We will now:
-
-* Check the distribution of key quality metrics.
-* Filter out genes that are not expressed in any cell
-* Identify low-quality cells
-* Filter and/or mark low quality cells
-    
-</div>
-
-<div style="width: 25%; float: right; padding-right: 10%; padding-top: 10%">
-<img src="Images/Rlogo.svg" class="centerimg" style="width: 95%">
-</div>
 
 
 ## Quality Control
@@ -70,8 +77,9 @@ We will now:
 
 Bioconductor R packages:
 
-* _scater_
-* _DropletUtils_
+* _scran_: Collection functions for interpretation of single-cell RNA-seq data
+* _scater_: For focus on quality control and visualization. 
+* _DropletUtils_: Handling single-cell (RNA-seq) data from droplet technologies such as 10X Genomics 
 
 **Orchestrating Single-Cell Analysis with Bioconductor**
 _Robert Amezquita, Aaron Lun, Stephanie Hicks, Raphael Gottardo_
@@ -86,27 +94,32 @@ http://bioconductor.org/books/release/OSCA/
 
 ## Read CellRanger outputs into R
 
-```{r echo=FALSE, out.width='80%', fig.align='center'}
-knitr::include_graphics('Images/sce_object_1.png')
-```
+<div style="width: 80%; float: left;">
+* CellRanger outputs: gives two output folders raw and filtered 
 
-### Loading a single sample
+* Each folder has three zipped files 
+  * features.tsv.gz, barcodes.tsv.gz and matrix.mtx.gz
+  * raw_feature_bc_matrix 
+    * All valid barcodes from GEMs captured in the data 
+    * Contains about half a million to a million barcodes 
+    * Most barcodes do not actually contain cells 
 
-```{r}
-sample.path <- c(SRR9264343 = "CellRanger_Outputs/SRR9264343/outs/filtered_feature_bc_matrix/")
-sce <- read10xCounts(sample.path, col.names=TRUE)
-```
+  * filtered_feature_bc_matrix 
+    * Excludes barcodes that correspond to this background 
+    * Contains valid cells according to 10x cell calling algorithm 
+    * Contains 100s to 1000s of barcodes 
+</div>
 
-### Loading multiple samples
+<div style="width: 75%; float: top; padding-left: 10%; padding-top: 10%">
+<img src="Images/sce_object_1.png" class="centerimg" style="width: 95%">
+</div>
 
-```{r eval=FALSE}
-list_of_files <- c(SRR9264343 = "CellRanger_Outputs/SRR9264343/outs/filtered_feature_bc_matrix",
-                   SRR9264344 = "CellRanger_Outputs/SRR9264344/outs/filtered_feature_bc_matrix",
-                   SRR9264347 = "CellRanger_Outputs/SRR9264347/outs/filtered_feature_bc_matrix")
-sce <- read10xCounts(list_of_files, col.names=TRUE)
-```
 
-#### $\rightarrow$ _SingleCellExperiment_ object
+
+## Single Cell Experiment Vocabulary alert
+
+* cell = Barcode = droplet
+* Transcript = UMI
 
 ## The _SingleCellExperiment_ object
 
@@ -116,58 +129,44 @@ knitr::include_graphics('Images/sce_object_2.png')
 
 ## The Counts Matrix
 
-```{r echo=FALSE, out.width='80%', fig.align='center'}
-knitr::include_graphics('Images/sce_object_counts_matrix.png')
-```
+<div style="width: 75%; float: top; padding-left: 10%; padding-top: 10%">
+<img src="Images/sce_object_counts_matrix.png" class="centerimg" style="width: 75%">
+</div>
 
-## The Counts Matrix
+<div style="width: 80%; float: left;">
+ To access counts from sce object: __counts(sce)__
+</div>
 
-```{r countsMatrix, eval = FALSE}
-counts(sce)
-```
 
-```{r echo = FALSE}
-# This just brings some genes with counts in the first few columns to the top
-# of the matrix so we have something to look at other than dots. 
-sce <- sce[c(60:36601, 1:59), ]
-counts(sce)
-```
 
 ## Feature metadata
 
-```{r echo=FALSE, out.width='80%', fig.align='center'}
-knitr::include_graphics('Images/sce_object_feature_metadata.png')
-```
+<div style="width: 75%; float: top; padding-left: 10%; padding-top: 10%">
+<img src="Images/sce_object_feature_metadata.png" class="centerimg" style="width: 75%">
+</div>
 
-## Feature metadata
+<div style="width: 80%; float: left;">
+ To access gene metadata from sce object: __rowData(sce)__
+</div>
 
-```{r example_row}
-rowData(sce)
-```
 
-## Droplet annotation (Cell metadata)
 
-```{r echo=FALSE, out.width='80%', fig.align='center'}
-knitr::include_graphics('Images/sce_object_cell_metadata.png')
-```
+
 
 ## Droplet annotation (Cell metadata)
 
-```{r example_col}
-colData(sce)
-```
+<div style="width: 75%; float: top; padding-left: 10%; padding-top: 10%">
+<img src="Images/sce_object_cell_metadata.png" class="centerimg" style="width: 75%">
+</div>
 
-```{r eval = FALSE}
-colnames(counts(sce))
-```
+<div style="width: 80%; float: left;">
+ To access cell metadata from sce object: __colData(sce)__
+</div>
 
-```{r echo = FALSE}
-head(colnames(counts(sce)), n = 22)
-```
 
 ## Properties of RNAseq data - Number of genes detected per cell
 
-```{r eval = FALSE, include = FALSE}
+```{r eval = FALSE, include = FALSE, eval=FALSE}
 tibble(`Gene per cell` = colSums(counts(sce) > 0)) %>% 
       ggplot(aes(x = `Gene per cell`)) +
         geom_density() +
@@ -184,7 +183,7 @@ knitr::include_graphics('Images/genes_per_cell.png')
 
 ## Properties of RNAseq data - Total UMIs 
 
-```{r, eval = FALSE, include = FALSE}
+```{r, eval = FALSE, include = FALSE, eval=FALSE}
 set.seed(232)
 tmpCounts <- counts(sce)[,sample(ncol(sce), 1000)]
 
@@ -209,7 +208,7 @@ knitr::include_graphics('Images/genes_by_umi.png')
 
 ## Properties of RNAseq data - Distribution of counts for a gene across cells
 
-```{r, eval = FALSE, include = FALSE}
+```{r, eval = FALSE, include = FALSE, eval=FALSE}
 cnts <- counts(sce)
 most_expressed <- rowSums(cnts) %>%  
     enframe(name = "Gene", value = "Total") %>%  
@@ -249,7 +248,7 @@ Although the count matrix has 36601 genes, many of these will not have been
 detected in any droplet. We can remove these to reduce the size of the count
 matrix.
 
-```{r}
+```{r eval=FALSE}
 undetected_genes <- rowSums(counts(sce)) == 0
 sce <- sce[!undetected_genes,]
 sce
@@ -288,22 +287,22 @@ sce <- addPerCellQC(sce, subsets = list(Mito = is.mito), BPPARAM  =  bp.params)
 saveRDS(sce, "sce_annotated.rds")
 ```
 
-```{r echo = FALSE}
+```{r echo = FALSE, eval=FALSE}
 sce <- readRDS("sce_annotated.rds")
 ```
 
-```{r eval = FALSE}
+```{r eval = FALSE, eval=FALSE}
 rowData(sce)
 ```
 
-```{r echo = FALSE}
+```{r echo = FALSE, eval=FALSE}
 ord <- rowData(sce)$Chromosome %>% str_replace("MT", "ZZZ") %>% order()
 rowData(sce[ord,])
 ```
 
 ## Quality Control
 
-```{r eval = FALSE}
+```{r eval = FALSE, eval=FALSE}
 is.mito <- which(rowData(sce)$Chromosome=="MT")
 sce <- addPerCellQC(sce, subsets = list(Mito = is.mito))
 ```
@@ -361,7 +360,7 @@ colData(sce)
 
 ## QC metrics - distribution
 
-```{r eval = FALSE}
+```{r eval = FALSE, eval=FALSE}
 plotColData(sce, x="Sample", y="sum") + scale_y_log10()
 plotColData(sce, x="Sample", y="detected") + scale_y_log10()
 plotColData(sce, x="Sample", y="subsets_Mito_percent")
@@ -396,7 +395,7 @@ knitr::include_graphics('Images/qc_violins_raw.png')
 
 ## QC metrics - relationship
 
-```{r echo = FALSE}
+```{r echo = FALSE, eval=FALSE}
 colData(sce)  %>%  
     as.data.frame() %>%  
     arrange(subsets_Mito_percent) %>%  
@@ -408,7 +407,7 @@ colData(sce)  %>%
 
 ## Identification of low-quality cells with adaptive thresholds
 
-```{r eval = FALSE}
+```{r eval = FALSE, eval=FALSE}
 sce$low_lib_size <- isOutlier(sce$sum, log=TRUE, type="lower")
 sce$low_n_features <- isOutlier(sce$detected, log=TRUE, type="lower")
 sce$high_Mito_percent <- isOutlier(sce$subsets_Mito_percent, type="higher") 
@@ -452,17 +451,17 @@ knitr::include_graphics('Images/qc_violins_filtered.png')
 
 ## All three filter steps at once
 
-```{r}
+```{r eval=FALSE}
 cell_qc_results <- quickPerCellQC(colData(sce), percent_subsets=c("subsets_Mito_percent"))
 ```
 
-```{r echo = FALSE}
+```{r echo = FALSE, eval=FALSE}
 cell_qc_results 
 ```
 
 ## All three filter steps at once
 
-```{r eval = FALSE}
+```{r eval = FALSE, eval=FALSE}
 cell_qc_results <- quickPerCellQC(colData(sce), percent_subsets=c("subsets_Mito_percent"))
 ```
 
@@ -488,7 +487,7 @@ knitr::include_graphics('Images/qc_venn.png')
 
 * Filter cells according to QC metrics.  
 
-```{r}
+```{r eval=FALSE}
 sce.Filtered <- sce[, !cell_qc_results$discard]
 sce.Filtered
 ```
