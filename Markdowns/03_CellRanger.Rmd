@@ -291,12 +291,6 @@ memory limit to `24` (Gb).
 ```bash
 #!/bin/bash
 
-# make output directory
-mkdir -p results/cellranger
-
-# change into that directory
-cd results/cellranger
-
 # run cellranger count (maximum CPUs 8; maximum RAM 24GB)
 cellranger count <<_YOUR_CODE_HERE_>>
 ```
