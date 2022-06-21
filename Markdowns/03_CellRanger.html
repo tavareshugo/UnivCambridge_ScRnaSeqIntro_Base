@@ -1913,7 +1913,7 @@ cellranger mkref \
 <p>If we save this script in our <code>scripts</code> folder as
 <code>01-prepare_reference.sh</code>, we could then run it from the
 terminal with:</p>
-<pre class="console"><code>$ bash scripts/01_prepare_reference.sh</code></pre>
+<pre class="console"><code>$ bash 01_prepare_reference.sh</code></pre>
 </details>
 </div>
 </div>
@@ -2057,10 +2057,9 @@ cellranger count \
 <p>If we save this script in our <code>scripts</code> folder as
 <code>02-cellranger.sh</code>, we could then run it from the terminal
 with:</p>
-<pre class="console"><code>$ bash scripts/02_cellranger_count.sh</code></pre>
+<pre class="console"><code>$ bash 02_cellranger_count.sh</code></pre>
 </details>
 </div>
-<!-- # -->
 </div>
 </div>
 </div>
@@ -2116,7 +2115,6 @@ depending on the tools that are used for analysis. In this course we
 will be loading the contents of the count matrix directories into R.</p>
 <p>The filtered count matrix only contains droplets that have been
 called as cells by Cell Ranger.</p>
-<!-- # -->
 <div id="the-summary-report" class="section level2" number="3.1">
 <h2><span class="header-section-number">3.1</span> The summary
 report</h2>
@@ -2134,7 +2132,6 @@ section. These can be accessed by clicking the question mark icon in the
 header of the section. A more comprehensive explanation of the various
 components of the report can be found on <a href="https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/output/summary">the
 10x website</a>.</p>
-<!-- # -->
 </div>
 <div id="the-cloupe-file-and-the-loupe-browser" class="section level2" number="3.2">
 <h2><span class="header-section-number">3.2</span> The cloupe file and
@@ -2155,12 +2152,10 @@ proper bioinformatic analysis. In particular, it should be remembered
 that Cell Ranger has not performed and QC on the contents of the
 droplets it has called as cells - in the next section of the course we
 will perform additional QC to eliminate poor quality cells.</p>
-<!-- # -->
 </div>
 <div id="the-count-matrices" class="section level2" number="3.3">
 <h2><span class="header-section-number">3.3</span> The count
 matrices</h2>
-<!-- # -->
 <div id="what-are-the-counts" class="section level3" number="3.3.1">
 <h3><span class="header-section-number">3.3.1</span> What are the
 counts?</h3>
@@ -2173,7 +2168,6 @@ the number of unique reads detected for the combination:</p>
 same UMI. For this reason we more commonly talk about the “UMI count”
 rather than the “Read count”; the “Read count” could be higher than the
 “UMI count”</p>
-<!-- # -->
 </div>
 <div id="filtered-vs.-raw-matrices" class="section level3" number="3.3.2">
 <h3><span class="header-section-number">3.3.2</span> Filtered vs. Raw
