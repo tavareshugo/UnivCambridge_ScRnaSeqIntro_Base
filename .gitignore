@@ -4,5 +4,11 @@
 *.Rproj
 .Rbuildignore
 
+# MAC files
+*DS_Store
+
 # VS Code workspace file
 *.code-workspace
+
+# Soft link
+Markdowns/Robjects
