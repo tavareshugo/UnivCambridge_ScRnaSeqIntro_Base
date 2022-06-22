@@ -164,7 +164,8 @@ visualise it.
 clustering1 <- clusterCells(sce, use.dimred="corrected", full=TRUE)
 ```
 
-This has defined 14 clusters with varying numbers of cells:
+This has defined `r max(as.numeric(clustering1$clusters))` clusters with varying
+numbers of cells:
 
 ```{r}
 table(clustering1$clusters)
@@ -258,9 +259,9 @@ sce$walktrap15 <- clusterCells(sce,
                            BLUSPARAM = SNNGraphParam(k = 15, cluster.fun = "walktrap"))
 ```
 
-
-This time we have defined 12 clustering. As a general rule, increasing *k* will
-tend to decrease the number of clusters (not always, but generally).
+This time we have defined `r max(as.numeric(sce$walktrap15))` clustering. As a
+general rule, increasing *k* will tend to decrease the number of clusters (not
+always, but generally).
 
 ```{r}
 table(sce$walktrap15)
@@ -275,7 +276,7 @@ table(sce$walktrap15, sce$SampleName) %>%
 ```
 
 Most clusters comprise cells from several replicates of a same sample type,
-cluster 9 appears to be predominantly cells from the ETV6-RUNX samples.
+cluster 7 appears to be predominantly cells from the ETV6-RUNX samples.
 
 We can visualise this on the TSNE:
 
@@ -449,9 +450,9 @@ plotSilGrid <- function(dat){
 }
 plotSilGrid(silPlot.dat)
 ```
-From these two plots we can see that clusters 2, 5 and 8 appear to have a good
-degree of separation. In contrast, clusters 1, 2 and 4 have a large number of
-cells that appear to be closer to cluster 3. It is possible clusters 1-4 contain
+From these two plots we can see that clusters 2, 5, 7, 8 and 9 appear to have a good
+degree of separation. In contrast, clusters 1, 3 and 4 have a large number of
+cells that appear to be closer to cluster 2. It is possible clusters 1-4 contain
 a degree of heterogeneity that suggests further splitting of these clusters may
 be required - perhaps there should more than 9 clusters to adequately reflect
 the biology.
