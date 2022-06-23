@@ -1,7 +1,7 @@
 ---
 title: "Feature Selection and Dimensionality Reduction"
-author: "Hugo Tavares"
-date: 'Nov 2021'
+author: "Hugo Tavares and Chandra Chilamakuri"
+date: 'June 2022'
 output:
   ioslides_presentation:
     widescreen: true
@@ -13,27 +13,25 @@ output:
 
 ## Single Cell RNAseq Analysis Workflow
 
-```{r echo=FALSE, out.width='80%', fig.align='center'}
+```{r echo=FALSE, out.width='70%', fig.align='center'}
 knitr::include_graphics('Images/workflow2_dimensReduc.png')
 ```
 
-## Dimensionality reduction
+## Why do high-dimensional data pose a problem?
 
-* Cells are characterized by the expression values of all genes --> thousands of dimensions 
+<div style="width: 75%; float: top; padding-left: 10%; padding-top: 10%">
 
-* Simplify complexity, so it becomes easier to work with (reduce the number of features/genes).
-  
-  + Making clustering step easier 
-  
-  + Making visualization easier 
+<img src="Images/ExpressionSpaceToPCASpace.png" class="centerimg" style="width: 55%">
+</div>
 
-* Remove redundancies in the data
+<div style="width: 80%; float: left;">
+* Single cell analysis is aimed at cluster the cells according to their gene expression
+* Thousands of genes across the cells
+* Problem with high-dimensional data
+  * Human intuition and understanding is limited to a three dimensional world
+  * As we increase the number of Dimensions, our data becomes more sparse. The average distance in between two points of our data set is increased and invariant. 
+</div>
 
-  + Expression of many genes are correlated, we don't need so many dimensions to distinguish cell types 
-  
-  + Identify the most relevant information and overcome the extensive technical noise in scRNA-seq data 
-
-* Reduce computational time for downstream procedures
 
 
 ## There are many dimensionality reduction algorithms 
@@ -66,8 +64,10 @@ knitr::include_graphics('Images/dim_red_algorithms.png')
 * Finds principal components (PCs) of the data 
 
   + Directions where the data is most spread out (highest variance)
-  
   + PC1 explains most of the variance in the data, then PC2, PC3, etc. 
+  + PCA is primarily a dimension reduction technique, but it is also useful for visuvalization
+  + A good separation of dissimilar objects is provided
+  + Preserves the global data structure 
 
 
 ## Principal Components Analysis (PCA)
