@@ -1,378 +1,476 @@
 ---
-title: "CRUK CI Summer School 2022 - introduction to single-cell RNA-seq analysis"
+title: "Introduction to single-cell RNA-seq analysis"
 subtitle: 'Dataset Integration'
 author: "Abbi Edwards"
 output:
   html_document:
     df_print: paged
     toc: yes
+    toc_float: true
     number_sections: true
-    code_folding: show
     css: ../css/boxes.css
 ---
 
 # Data integration - PBMMC and ETV6-RUNX samples
 
+```{r, echo=FALSE, purl=FALSE}
+set.seed(1704)
+```
 
-## Learning Objectives
+## Introduction
 
-* Understand why/when batch correction is required
-* Understand where data set integration fits in the workflow
-* Understand one main method for batch correction
-* Understand how to check your batch correction has worked
+Often, single-cell experiments are done by processing samples in multiple batches. 
+This may be related to logistical constraints such as the inability to run all experimental conditions in parallel, or more extreme cases where samples are processed in different laboratories, by different people and even sequenced with different technologies (e.g. samples from human patients collected in different hospitals). 
+These differences across sample batches very often result in global gene expression differences across those batches. 
+Since batch-to-batch transcriptomic differences are likely unrelated to biological differences, we would ideally want "remove" them before drawing inferences about our cell populations. 
+
+Biases due to batch effects are not new to single-cell RNA-seq.
+Indeed, several methods have been previously developed for standard bulk RNA-seq approaches. 
+Some of those approaches rely on linear models that "regress out" the batch effect, assuming that the cell composition is similar across batches. 
+However, in single-cell RNA-seq we may very often expect changes in cell compositions across batches (e.g. in our course data we have data from cancer samples such as ETV6-RUNX as well as a reference panel of healthy blood cells, PBMMCs). 
+Therefore, methods are necessary that can deal with with heterogeneity across batches. 
+
+In recent years, several methods have been developed to deal with this challenge ([too many to list here](https://www.scrna-tools.org/tools?sort=name&cats=Integration)!).
+Some of the most popular ones include the _Mutual Nearest Neighbours_ (MNN) algorithm, a Principal Components Analysis-based clustering method implemented in the package _HARMONY_ and a method that combines Canonical Correlation Analysis (CCC) and MNN implemented in the package _Seurat 3_.
+These methods have been shown to perform well in several benchmark studies (e.g. Luecken et al 2022 and Tran et al 2020), although one important message from these studies is that **no single method is universally the best in all situations**. 
+For example, some methods may be better at preserving small populations of cells as separate groups in the integrated data at the cost of poorer overall integration, while others may be better at removing batch effects at the cost of also removing some biological signal.
+
+In this section we will apply the **_Mutual Nearest Neighbours (MNN)_** algorithm, which is readily available to use with the `SingleCellExperiment` object we've been working with so far. 
+However, other methods can be applied to the data in a similar manner (each package may use a slightly different syntax, but they mostly start with either a matrix of counts or a PCA projection). 
+Therefore, what we will explore in this section - visualisation of the integrated data, looking at mixture of cell populations, etc. - can be done with those other methods as well. 
+
+To learn more about this method and how to use it with the Bioconductor packages, see the ['Integrating Datasets'](http://bioconductor.org/books/3.15/OSCA.multisample/integrating-datasets.html) chapter in the OSCA book.
+
+
+## Setup 
+
+The first step of our analysis is to load the libraries we will use:
 
 ```{r library_PBMMC_ETV6-RUNX1, warning=FALSE, message=FALSE}
+# load libraries ----
+
 library(scater)
 library(scran)
 library(batchelor)
 library(bluster)
 library(tidyverse)
 library(pheatmap)
-library(clustree)
-library(Cairo)
 library(BiocSingular)
-library(cowplot)
 ```
 
-Source: ['Integrating Datasets'](https://osca.bioconductor.org/integrating-datasets.html) chapter in the OSCA book.
+To exemplify the integration process, we will start with data that was prepared for demonstration purposes (we will use our previous SCE object in a later exercise). 
 
-## Motivation
+The two samples we have here are technical replicates of one another, coming from distinct 10X runs. 
+Therefore, if there was no batch effect, they should be identical. 
+These samples have been processed as discussed up until this point in the course:
 
-Large single-cell RNA sequencing (scRNA-seq) projects usually need to generate data across multiple batches due to logistical constraints. However, the processing of different batches is often subject to uncontrollable differences, e.g., changes in operator, differences in reagent quality. This results in systematic differences in the observed expression in cells from different batches, which we refer to as “batch effects”. Batch effects are problematic as they can be major drivers of heterogeneity in the data, masking the relevant biological differences and complicating interpretation of the results.
+- Raw counts were imported from the `cellranger` output folder (using `DropletUtils::read10xCounts()`).
+- Basic quality filtering was performed in each batch to remove cells that were outliers for total counts, number of detected genes and high percentage of mitochondrial counts (using `scuttle::quickPerCellQC()`).
+- Reads were log-normalised using the deconvolution method (using  `scuttle::computePooledFactors()`).
+- A mean-variance model was fit to identify highly-variable genes (HVGs) in each batch (using `scran::modelGeneVar()`).
 
-Computational removal of batch-to-batch variation allows us to combine data across multiple batches for a consolidated downstream analysis. However, existing methods based on linear models (Ritchie et al. 2015; Leek et al. 2012) assume that the composition of cell populations are either known or the same across batches. To overcome these limitations, bespoke methods have been developed for batch correction of single-cell data (Haghverdi et al. 2018; Butler et al. 2018; Lin et al. 2019) that do not require a priori knowledge about the composition of the population. This allows them to be used in workflows for exploratory analyses of scRNA-seq data where such knowledge is usually unavailable.
+We already have the necessary objects prepared, and load them for this session:
 
-## Load the data
+```{r loadSimpleSamples, echo=FALSE, purl=FALSE}
+# read the data ----
 
-To demonstrate the code we will load the data we have for two samples which are technical replicates of one another from two different 10X runs and so if there were no batch effect they should be the same. These samples have been processed as discussed up until this point in the course.
+# SCE objects for the two technical replicates
+sce_rep1 <- readRDS("../CourseMaterials/Robjects/BC_sample1_dimred.rds")
+sce_rep2 <- readRDS("../CourseMaterials/Robjects/BC_sample2_dimred.rds")
 
-```{r, loadSimpleSamples}
+# add information about which replicate each sample is from
+# this is added as a new column in the colData DataFrame of the object
+colData(sce_rep1)$batch <- "1"
+colData(sce_rep2)$batch <- "2"
 
-ori.sce.sample.1 <- readRDS("../Robjects/BC_sample1_dimred.rds")
-ori.sce.sample.2 <- readRDS("../Robjects/BC_sample2_dimred.rds")
-
-dec.sample.1 <- readRDS("../Robjects/BC_dec1_dimred.rds")
-dec.sample.2 <- readRDS("../Robjects/BC_dec2_dimred.rds")
-
+# DataFrame objects with mean-variance results from modelGeneVar()
+gene_var_rep1 <- readRDS("../CourseMaterials/Robjects/BC_dec1_dimred.rds")
+gene_var_rep2 <- readRDS("../CourseMaterials/Robjects/BC_dec2_dimred.rds")
 ```
 
-## Prepare the data
+```{r, eval=FALSE}
+# read the data ----
 
-The first and most obvious is to subset all batches to the common “universe” of features. In this case, it is straightforward as both batches use Ensembl gene annotation; more difficult integrations will require some mapping of identifiers using the packages from Annotation Hub.
+# SCE objects for the two technical replicates
+sce_rep1 <- readRDS("Robjects/BC_sample1_dimred.rds")
+sce_rep2 <- readRDS("Robjects/BC_sample2_dimred.rds")
 
-```{r}
-universe <- intersect(rownames(ori.sce.sample.1), rownames(ori.sce.sample.2))
-length(universe)
+# add information about which replicate each sample is from
+# this is added as a new column in the colData DataFrame of the object
+colData(sce_rep1)$batch <- "1"
+colData(sce_rep2)$batch <- "2"
+
+# DataFrame objects with mean-variance results from modelGeneVar()
+gene_var_rep1 <- readRDS("Robjects/BC_dec1_dimred.rds")
+gene_var_rep2 <- readRDS("Robjects/BC_dec2_dimred.rds")
 ```
 
-```{r}
-# Subsetting the SingleCellExperiment object
-sce.sample.1 <- ori.sce.sample.1[universe,]
-sce.sample.2 <- ori.sce.sample.2[universe,]
 
-# Also subsetting the variance modelling results
-dec.sample.1 <- dec.sample.1[universe,]
-dec.sample.2 <- dec.sample.2[universe,]
+## Data Preparation
 
+Before the data integration step, we need to prepare our data (we will later see how we can run all these steps with a single function, but it is good to see all the steps individually):
+
+1. Subset our objects to only include the set of genes that are common in both samples (in case different genes were filtered out).
+2. Rescale the batches to account for different sequencing depths. We had [previously log-normalised the counts](05_Normalisation.html#deconvolution) in each batch. However, this did not take into account differences in total sequencing depth across different batches. This step therefore helps to bring the different batches to a "similar scale", which helps with the data integration step. 
+2. Select variable genes (feature selection), by averaging the variance previously estimated in each batch separately. This will gives us genes that are highly variable across both batches. 
+
+```{r prep_data}
+# Data preparation - subset common genes ----
+
+# identify genes common to both samples
+common_genes <- intersect(rownames(sce_rep1), rownames(sce_rep2))
+
+# Subset the SCE object
+sce_rep1 <- sce_rep1[common_genes, ]
+sce_rep2 <- sce_rep2[common_genes, ]
+
+# Subset the mean-variance results
+gene_var_rep1 <- gene_var_rep1[common_genes, ]
+gene_var_rep2 <- gene_var_rep2[common_genes, ]
+
+
+# Data preparation - rescale size factors ----
+
+# rescale the size factors in each batch to account for sequencing depth differences
+# this returns a list with two SCE objects
+rescaled_size_factors <- multiBatchNorm(sce_rep1, sce_rep2)
+
+# combine both objects in the list
+sce <- cbind(rescaled_size_factors[[1]], 
+             rescaled_size_factors[[2]])
+
+
+# Data preparation - select variable genes ----
+
+# summarise the variance estimated across batches
+gene_var_combined <- combineVar(gene_var_rep1, gene_var_rep2)
+
+# choose HVGs
+hvgs <- gene_var_combined$bio > 0
+sum(hvgs) # number of HVGs selected
 ```
 
-The second step is to rescale each batch to adjust for differences in sequencing depth between batches. The multiBatchNorm() function recomputes log-normalized expression values after adjusting the size factors for systematic differences in coverage between SingleCellExperiment objects. (Size factors only remove biases between cells within a single batch.) This improves the quality of the correction by removing one aspect of the technical differences between batches.
+Note that we used quite a low threshold for choosing HVGs, by simply saying that we want any genes that are above the mean-variance trend. 
+This is to ensure that we include batch-specific variable genes (even if they have low-ish between-batch variance), as these may represent cell populations that are exclusive to that batch. 
+This information is important to retain in the data integration step (so that those cells don't become over-integrated in the final result). 
 
-```{r}
-rescaled <- multiBatchNorm(sce.sample.1, sce.sample.2)
-sce.sample.1 <- rescaled[[1]]
-sce.sample.2 <- rescaled[[2]]
+
+## Visualising Uncorrected Data
+
+Before running the data integration procedure, it is always good to check how much of a problem the batch effect might be. 
+This is typically done by visualising the combined data in a reduced dimensionality projection such as t-SNE or UMAP. 
+
+Another strategy to check for batch effects, involves clustering the cells (we will cover cell clustering in detail later) and checking whether both batches are represented in each cluster. 
+If clusters contain cells from only one of the clusters, this may indicate a batch effect is present.
+
+
+```{r uncorrected_tsne}
+# Visualise uncorrected data ----
+
+# run PCA - this adds a "PCA" slot to the SCE object
+sce <- runPCA(sce, subset_row = hvgs)
+
+# Define cell clusters - this will be covered in detail later
+sce$cluster_uncorrected <- clusterCells(sce, 
+                                        use.dimred = "PCA")
+
+# run and visualise TSNE
+sce <- runTSNE(sce, dimred = "PCA", name = "TSNE_uncorrected")
+plotReducedDim(sce, dimred = "TSNE_uncorrected",
+               colour_by = "batch", text_by = "cluster_uncorrected")
+
+# tabulate cells per cluster
+table(Cluster = sce$cluster_uncorrected, Batch = sce$batch)
 ```
 
-Finally, we perform feature selection by averaging the variance components across all batches with the combineVar() function. We compute the average as it is responsive to batch-specific HVGs while still preserving the within-batch ranking of genes. This allows us to use the same strategies discussed earlier to select genes of interest. In contrast, approaches based on taking the intersection or union of HVGs across batches become increasingly conservative or liberal, respectively, with an increasing number of batches.
+As we can see from the t-SNE, cells seem to somewhat separate according to batch (although distinct groups of cells are still visible at a more global scale).
+We can also see that some of the clusters identified in the data contain an unbalanced number of cells from each batch. 
+For example, cluster 16 contains mostly cells from batch 2, whereas cluster 17 contains mostly cells from batch 1. 
+However, from the t-SNE, there is some suggestion that these could be the same cell type.
+Another example is cluster 7, which contains cells from both batches, but on the t-SNE there is still some within-batch separation of these cells (if we formed sub-clusters they would likely separate by batch). 
 
-```{r}
-combined.dec <- combineVar(dec.sample.1, dec.sample.2)
-chosen.hvgs <- combined.dec$bio > 0
-sum(chosen.hvgs)
-```
+It is worth noting that, although this suggests a batch effect (and in the case of technical replicates this is a good assumption), there might be cases where there are genuine differences in cell populations across batches (e.g. if the different batches represent samples from different tissues). 
+Data integration algorithms designed for single-cell RNA-seq do allow for unique cell types existing across batches. 
+However, it's always good to check the results of the integration using independent information (e.g. prior information about genes that are specific to particular cell types).
 
-When integrating datasets of variable composition, it is generally safer to err on the side of including more HVGs than are used in a single dataset analysis, to ensure that markers are retained for any dataset-specific subpopulations that might be present. That said, many of the signal-to-noise considerations discussed previously still apply here, so some experimentation may be necessary for best results.
-
-## View the uncorrected data
-
-Before we actually perform any correction, it is worth examining whether there is any batch effect in this dataset. We combine the two SingleCellExperiments and perform a PCA on the log-expression values for our selected subset of HVGs.
-
-```{r}
-# Synchronizing the metadata for cbind()ing.
-rowData(sce.sample.1) <- rowData(sce.sample.2)
-sce.sample.1$batch <- "1"
-sce.sample.2$batch <- "2"
-uncorrected <- cbind(sce.sample.1, sce.sample.2)
-
-#run the PCA
-set.seed(0010101010)
-uncorrected <- runPCA(uncorrected, subset_row=chosen.hvgs)
-```
-
-We use graph-based clustering on the components to obtain a summary of the population structure. As our two sample populations should be replicates, each cluster should ideally consist of cells from both batches. However, we instead see clusters that are mostly comprised of cells from a single batch. This indicates that cells of the same type are artificially separated due to technical differences between batches.
-
-```{r}
-uncorrected.snn.gr <- buildSNNGraph(uncorrected, use.dimred="PCA")
-uncorrected.clusters <- igraph::cluster_walktrap(uncorrected.snn.gr)$membership
-uncorrected.tab <- table(Cluster=uncorrected.clusters, Batch=uncorrected$batch)
-uncorrected.tab
-```
-
-This is supported by the t-SNE visualization where the separation between cells from different batches is consistent with the clustering results.
-
-```{r}
-set.seed(1111001)
-uncorrected <- runTSNE(uncorrected, dimred="PCA")
-plotTSNE(uncorrected, colour_by="batch")
-```
-
-Of course, the other explanation for batch-specific clusters is that there are cell types that are unique to each batch. The degree of intermingling of cells from different batches is not an effective diagnostic when the batches involved might actually contain unique cell subpopulations (which is not a consideration with these samples, but the same cannot be said in general). If a cluster only contains cells from a single batch, one can always debate whether that is caused by a failure of the correction method or if there is truly a batch-specific subpopulation. For example, do batch-specific metabolic or differentiation states represent distinct subpopulations? Or should they be merged together? Each batch correction algorithm will make different (and possibly inappropriate) decisions on what constitutes “shared” and “unique” populations.
 
 ## Correct the data - Mutual Nearest Neighbour
 
-Consider a cell 'a' in batch 'A', and identify the cells in batch 'B' that are nearest neighbors to 'a' in the expression space defined by the selected features. Repeat this for a cell'b' in batch 'B', identifying its nearest neighbors in 'A'.
+The _Mutual Nearest Neighbours_ algorithm works by finding if a pair of cells from two different batches are within the top _K_ closest neighbours of each other. 
 
-Mutual nearest neighbors are pairs of cells from different batches that belong in each other’s set of nearest neighbors. The reasoning is that MNN pairs represent cells from the same biological state prior to the application of a batch effect - see Haghverdi et al. (2018) for full theoretical details. Thus, the difference between cells in MNN pairs can be used as an estimate of the batch effect, the subtraction of which yields batch-corrected values.
+![Schematic of the MNN algorithm. Source: [Haghverdi et al 2018](https://www.nature.com/articles/nbt.4091)](https://media.springernature.com/lw685/springer-static/image/art%3A10.1038%2Fnbt.4091/MediaObjects/41587_2018_Article_BFnbt4091_Fig1_HTML.jpg?as=webp)
 
-Compared to linear regression, MNN correction does not assume that the population composition is the same or known beforehand. This is because it learns the shared population structure via identification of MNN pairs and uses this information to obtain an appropriate estimate of the batch effect. Instead, the key assumption of MNN-based approaches is that the batch effect is orthogonal to the biology in high-dimensional expression space. Violations reduce the effectiveness and accuracy of the correction, with the most common case arising from variations in the direction of the batch effect between clusters. Nonetheless, the assumption is usually reasonable as a random vector is very likely to be orthogonal in high-dimensional space.
+Here are the assumptions of this approach (taken from [Haghverdi et al 2018](https://www.nature.com/articles/nbt.4091)):
 
-The batchelor package provides an implementation of the MNN approach via the fastMNN() function. (Unlike the MNN method originally described by Haghverdi et al. (2018), the fastMNN() function performs PCA to reduce the dimensions beforehand and speed up the downstream neighbor detection steps.) We apply it to our two batches to remove the batch effect across the highly variable genes in chosen.hvgs. To reduce computational work and technical noise, all cells in all batches are projected into the low-dimensional space defined by the top 'd' principal components. Identification of MNNs and calculation of correction vectors are then performed in this low-dimensional space.
+> (i) There is at least one cell population that is present in both batches, 
+> 
+> (ii) the batch effect is almost orthogonal [i.e. uncorrelated] to the biological subspace, and 
+> 
+> (iii) the batch-effect variation is much smaller than the biological-effect variation between different cell types
 
-```{r}
-set.seed(1000101001)
-mnn.out <- fastMNN(sce.sample.1, sce.sample.2, d=50, k=20, subset.row=chosen.hvgs)
-mnn.out
+To run the algorithm, we use the `fastMNN()` function, which takes as input:
+
+* The SCE object with the log-normalised counts to correct. 
+* A variable specifying the batch labels for each cell (usually we include that information as a column in the `colData` slot of the object).
+* The number of dimensions to use from a PCA projection of the data (the method uses PCA values for computational efficiency - and it has also been shown to often perform better than using the full matrix of logcounts).
+* The number of cells to consider when calculating the mutual nearest neighbours between each pair of cells.
+* The genes to use for the PCA step of the algorithm. We use the highly-variable genes determined earlier from the pooled mean-variance model. 
+
+```{r run_mnn}
+# Perform MNN correction ----
+
+# run the MNN algorithm with 
+# d = 50 principal components
+# k = 20 nearest neighbours
+mnn_corrected <- fastMNN(sce, 
+                         batch = sce$batch,
+                         d = 50, k = 20, 
+                         subset.row = hvgs)
+mnn_corrected
 ```
 
-The function returns a SingleCellExperiment object containing corrected values for downstream analyses like clustering or visualization. Each column of mnn.out corresponds to a cell in one of the batches, while each row corresponds to an input gene in chosen.hvgs. The batch field in the column metadata contains a vector specifying the batch of origin of each cell.
+The result of the function is a new `SingleCellExperiment` object, with the main part of interest being a corrected matrix of expression that can be used in downstream analysis. 
+This is stored in a `reducedDim` slot, which we can add to our original SCE object, so that we keep all the data together in the same object:
 
-The corrected matrix in the reducedDims() contains the low-dimensional corrected coordinates for all cells, which we will use in place of the PCs in our downstream analyses.
-
-```{r}
-dim(reducedDim(mnn.out, "corrected"))
+```{r extract_mnn}
+# store the corrected values in a new reducedDim in the original sce object
+reducedDim(sce, "corrected") <- reducedDim(mnn_corrected, "corrected")
 ```
 
-A reconstructed matrix in the assays() contains the corrected expression values for each gene in each cell, obtained by projecting the low-dimensional coordinates in corrected back into gene expression space. We do not recommend using this for anything other than visualization.
+:::note
+**How many neighbours (_k_) should we consider?**
+
+The answer to this question - as is often the case in bioinformatics! - is that this will depend on the dataset. 
+One heuristic to use is to think about what is the minimum number a given cell type that you expect to be shared between the batches. 
+For example, the value `k = 20` is approximately equivalent to assuming that we expect there to be a group of a least 20 cells of one type in one batch that have an equivalent group of 20 or more cells of the same type in the other batch. 
+
+Sometimes, based on the analysis of known cell-specific marker genes, we may notice that some batch-specific clusters should have been merged, but are not. 
+In those cases, increasing the number of _k_ neighbours will result in a stronger integration (we are effectively increasing the chance that a given pair of cells are mutual neighbours of each other). 
+:::
+
+
+### Visualising the Corrected Data
 
 ```{r}
-assay(mnn.out, "reconstructed")
+# Visualise corrected data ----
+
+# Define cell clusters based on the corrected matrix
+sce$cluster_corrected <- clusterCells(sce, 
+                                      use.dimred = "corrected")
+
+# run and visualise TSNE
+sce <- runTSNE(sce, dimred = "corrected", name = "TSNE_corrected")
+plotReducedDim(sce, dimred = "TSNE_corrected", 
+               colour_by = "batch", text_by = "cluster_corrected")
 ```
 
-The most relevant parameter for tuning fastMNN() is k, which specifies the number of nearest neighbors to consider when defining MNN pairs. This can be interpreted as the minimum anticipated frequency of any shared cell type or state in each batch. Increasing k will generally result in more aggressive merging as the algorithm is more generous in matching subpopulations across batches. It can occasionally be desirable to increase k if one clearly sees that the same cell types are not being adequately merged across batches.
+From this new t-SNE, we can see that the cells from the two batches seem to be much better mixed with each other. 
+There is still some apparent separation (e.g. cluster 3 is mostly composed of batch 1 and cluster 4 of batch 2 cells), which count indicate that we should use a higher value of _k_ with `fastMNN()`. 
+If in doubt, it may be better to avoid over-correcting the data, and rather come back to the analysis after we did some more investigation of what kind of genes separate those cells (a topic for the next session). 
 
-## View the corrected data
+We can also compare the mixing of cells in the clusters before and after correction. 
+This time we tabulate and visualise the results using `ggplot`:
 
-We cluster on the low-dimensional corrected coordinates to obtain a partitioning of the cells that serves as a proxy for the population structure. If the batch effect is successfully corrected, clusters corresponding to shared cell types or states should contain cells from multiple batches. We see that all clusters contain contributions from each batch after correction, consistent with our expectation that the two batches are replicates of each other.
+```{r batch_cluster_viz}
+# visualise cells per cluster
+as.data.frame(table(Cluster = sce$cluster_corrected, Batch = sce$batch)) %>%
+  ggplot(aes(Cluster, Freq)) +
+  geom_col(aes(fill = Batch)) +
+  labs(title = "MNN-corrected data")
 
-```{r}
-mnn.snn.gr <- buildSNNGraph(mnn.out, use.dimred="corrected")
-mnn.clusters <- igraph::cluster_walktrap(mnn.snn.gr)$membership
-mnn.tab <- table(Cluster=mnn.clusters, Batch=mnn.out$batch)
-mnn.tab
+as.data.frame(table(Cluster = sce$cluster_uncorrected, Batch = sce$batch)) %>%
+  ggplot(aes(Cluster, Freq)) +
+  geom_col(aes(fill = Batch)) +
+  labs(title = "Uncorrected data")
 ```
 
-```{r}
-set.seed(0010101010)
-mnn.out <- runTSNE(mnn.out, dimred="corrected")
+We can confirm from this visualisation that there is more mixing of cells within a batch in the corrected data compared to the original one. 
 
-mnn.out$batch <- factor(mnn.out$batch)
-plotTSNE(mnn.out, colour_by="batch")
-```
 
-```{r, message=FALSE}
-# make dataframes
-clusterTab.uncorrected <- data.frame(clusters=uncorrected.clusters, batch=uncorrected$batch, source=uncorrected$batch) %>%
-  group_by(clusters,batch) %>%
-  summarise(cells = n())
-clusterTab.mnn <- data.frame(clusters=mnn.clusters, batch=mnn.out$batch, source=mnn.out$batch) %>%
-  group_by(clusters,batch) %>%
-  summarise(cells = n())
+## The `quickCorrect()` Function
 
-# plot bars
-bar.uncorrected <- ggplot(data=clusterTab.uncorrected, 
-                          aes(x=clusters,y=cells, fill=batch)) +
-	theme(axis.text.x=element_text(angle = 90, hjust = 0)) +
-	geom_col() +
-	theme(legend.text = element_text(size = 7))
-bar.mnn <- ggplot(data=clusterTab.mnn, 
-              aes(x=clusters,y=cells, fill=batch)) +
-	theme(axis.text.x=element_text(angle = 90, hjust = 0)) +
-	geom_col() +
-	theme(legend.text = element_text(size = 7))
+The `{batchelor}` package has made the data integration procedure easier by having a wrapper function called `quickCorrect()`, which automates the individual steps we went through to prepare the data before MNN correction.
+This includes intersecting the batches for common genes, log-normalising the batches, and identifying highly variable genes across batches. 
+By default, `quickCorrect()` will use the _fastMNN_ method, but you can change it to use other correction algorithms by modifying the `PARAM` argument (see more details in the function's help page).
 
-plot_grid(bar.uncorrected, bar.mnn, ncol=1)
-```
+```{r, purl=FALSE}
+# Correction in a single step ----
 
-## The quickCorrect wrapper
+# get the MNN-corrected SCE from quickCorrect
+sce_quick_mnn <- quickCorrect(sce_rep1, sce_rep2)$corrected
+sce_quick_mnn$batch <- factor(sce_quick_mnn$batch) # ensure batch is encoded as factor for plotting
 
-The batchelor package has actually made this even easier for us by having a wrapper function called quickCorrect which does alot of these steps for us all at once. It performs all the steps we did to prepare the data and runs the correction. By default this is the fastMNN correction but you can change to use other correction algorithms by modifying the PARAM= argument.
-
-1. Intersecting each batch to the universe of common features with intersectRows.
-
-2. Applying normalization and log-transformation to the batches with multiBatchNorm.
-
-3. Modelling the per-gene variance with modelGeneVar. If precomputed is supplied, the precomputed results are used instead.
-
-4. Identifying highly variable genes with getTopHVGs. These genes will be used in the correction, though corrected values for all genes can be returned by setting correct.all=TRUE.
-
-5. Applying the batch correction algorithm of choice with batchCorrect, as specified by PARAM.
-
-```{r}
-quick.corrected <- quickCorrect(ori.sce.sample.1, ori.sce.sample.2)
-
-quick.sce <- quick.corrected$corrected
-quick.sce
-```
-
-```{r}
-set.seed(00101010)
-quick.sce <- runTSNE(quick.sce, dimred="corrected")
-quick.sce$batch <- factor(quick.sce$batch)
-plotTSNE(quick.sce, colour_by="batch")
+# quickly visualise to check that it is identical to what we obtained previously
+sce_quick_mnn %>%
+  runTSNE(dimred = "corrected") %>%
+  plotTSNE(colour_by = "batch")
 ```
 
 ## Multiple Batches
 
-The above example showed two samples or 'batches' but it will often be the case that we have many samples or batches. It is straightforward to simultaneously perform correction across >2 batches, either by having multiple levels in batch= or by providing more SingleCellExperiment objects (or even raw matrices of expression values). Lets try this out with more of the samples from our dataset.
+The above example used only two samples (batches), but it will often be the case that we have many samples or batches. 
+It is straightforward to simultaneously perform correction across >2 batches with `quickCorrect()`, either by using the `batch=` option or by providing several separate `SingleCellExperiment` objects. 
+Lets try this out with more of the samples from our dataset.
 
-### Load Data
-
-This is a large list of 7 SingleCellExperiment objects from our dataset that have been processed as discussed in the previous sessions and downsampled to 500 cells per sample for processing speed.
-
-```{r}
-# ETV6_RUNX1 and PBMMC dataset
-all.sce <- readRDS("../Robjects/DataIntegration_all_sce_dimred.Rds")
-all.sce
-```
-
-## Exercise 1
 
 :::exercise
 
-Run quickCorrect on our new SingleCellExperiment object treating each individual sample as a batch.
+In this exercise we will work with a `SingleCellExperiment` that contains 7 of the samples that we have worked with so far.
+This object has been processed as discussed in the previous sections, but we down-sampled the data to 500 cells per sample for processing speed (in real analysis you would not do this).
+
+The following code starts by reading the data and tabulate how many cells we have in each sample. 
+Fix the rest of the code (replace the word "FIXME" with your code), in order to:
+
+1. Integrate the data using the `quickCorrect()` wrapper, treating each individual sample as a batch.
+2. Plot a UMAP of your corrected data and compare it to the uncorrected data. Note that the object we have loaded already contains a UMAP computed from the uncorrected logcounts (in the default `reducedDim` slot called "UMAP").
 
 <details><summary>Hint</summary>
  
-When you use a single `sce` object you must specify what you want to use as a batch using the `batch = ` argument. See the Help page for more details.
+When you use a single `sce` object you must specify what you want to use as a batch using the `batch = ` argument. See the Help page (`?quickCorrect`) for more details.
 
 </details>
 
-<details><summary>Answer</summary>
-```{r}
-quick.corrected.all <- quickCorrect(all.sce, batch = all.sce$SampleName)
+```{r exercise1, eval=FALSE}
+# Exercise 1 ----
 
-quick.sce.all <- quick.corrected.all$corrected
+# read ETV6_RUNX1 and PBMMC datasets
+sce_all <- readRDS("Robjects/DataIntegration_all_sce_dimred.Rds")
 
-quick.sce.all
+# tabulate the number of cells per sample
+table(sce_all$SampleName)
+
+# obtain a batch-corrected SCE object
+sce_all_corrected <- quickCorrect(FIXME)$corrected
+
+# add the corrected matrix to the original object - to keep it all together
+reducedDim(sce_all, "corrected") <- reducedDim(sce_all_corrected, "corrected")
+
+# update SCE object with a UMAP on corrected data
+# name this dimred as "UMAP_corrected" to distinguish it from the original
+sce_all <- runUMAP(sce_all, 
+                   dimred = FIXME,
+                   name = FIXME)
+
+# visualise uncorrected UMAP
+plotReducedDim(sce_all, dimred = "UMAP", colour_by = "SampleName")
+
+# visualise corrected UMAP
+plotReducedDim(sce_all, FIXME)
 ```
+
+```{r, echo=FALSE, purl=FALSE}
+sce_all <- readRDS("../CourseMaterials/Robjects/DataIntegration_all_sce_dimred.Rds")
+```
+
+
+<details><summary>Answer</summary>
+
+Here is the corrected code:
+
+```{r, purl=FALSE}
+# obtain a batch-corrected SCE object
+sce_all_corrected <- quickCorrect(sce_all, batch = sce_all$SampleName)$corrected
+
+# add the corrected matrix to the original object - to keep it all together
+reducedDim(sce_all, "corrected") <- reducedDim(sce_all_corrected, "corrected")
+
+# update SCE object with a UMAP on corrected data
+sce_all <- runUMAP(sce_all, 
+                   dimred = "corrected",
+                   name = "UMAP_corrected")
+
+# visualise both corrected and uncorrected
+plotReducedDim(sce_all, dimred = "UMAP", colour_by = "SampleName")
+plotReducedDim(sce_all, dimred = "UMAP_corrected", colour_by = "SampleName")
+```
+
+We can see that, in the corrected UMAP, clusters that were previously separated by sample are now better mixed together.
+
 </details>
 
 :::
 
-## Exercise 2
-
-:::exercise
-
-Plot the t-SNE of your corrected data and compare it to the uncorrected data.
-
-![uncorrected](Images/uncorrected_tsne.png)
-
-<details><summary>Answer</summary>
-```{r}
-set.seed(0010101011)
-quick.sce.all <- runTSNE(quick.sce.all, dimred="corrected")
-quick.sce.all$batch <- factor(quick.sce.all$batch)
-plotTSNE(quick.sce.all, colour_by="batch")
-```
-</details>
-
-:::
-
-When running the correction it is important to note that the metadata stored in the `colData` of the input object will not be present in the output object. We have to recreate this if we want to use it later. We can easily do this as the output object will be ordered the same as the input.
-
-```{r}
-meta <- colData(all.sce) %>%
-  as.data.frame() %>%
-  DataFrame()
-
-colData(quick.sce.all) <- meta
-  
-```
 
 ## Correction Diagnostics
 
 ### Mixing Between Batches
 
-Ideally, batch correction would remove the differences between batches while preserving the heterogeneity within batches. In the corrected data, cells of the same type should be intermingled and indistinguishable even if they come from different batches, while cells of different types should remain well-separated. Unfortunately, we rarely have prior knowledge of the underlying types of the cells, making it difficult to unambiguously determine whether differences between batches represent geniune biology or incomplete correction. Indeed, it could be said that all correction methods are at least somewhat incorrect, though that not preclude them from being useful.
+As before, we can explore our data to see if clustering the cells using the corrected data results in batches containing cells from multiple samples/batches, rather than being skewed to having one-batch-per-cluster.
 
-We cluster on the low-dimensional corrected coordinates to obtain a partitioning of the cells that serves as a proxy for the population structure. If the batch effect is successfully corrected, clusters corresponding to shared cell types or states should contain cells from multiple batches. 
-
-```{r}
-all.snn.gr <- buildSNNGraph(quick.sce.all, use.dimred="corrected", k=20)
-clusters.all <- igraph::cluster_walktrap(all.snn.gr)$membership
-colLabels(quick.sce.all) <- factor(clusters.all)
-
-clusterTab.all <- data.frame(clusters=clusters.all, batch=quick.sce.all$SampleName, source=quick.sce.all$SampleGroup)
-
-all.tab <- table(Cluster=clusters.all, Batch=quick.sce.all$SampleName)
-all.tab
-```
+This clustering serves as a proxy for the population structure. 
+So, if the batch effect is successfully corrected, clusters corresponding to shared cell types or states should contain cells from multiple batches. 
 
 ```{r}
-ClusterInfo.all <- data.frame(Cluster=clusters.all, Batch=quick.sce.all$SampleName, source=quick.sce.all$SampleGroup) %>%
-  group_by(Cluster,Batch) %>%
-  summarise(cells = n())
+# Correction Diagnostics ----
 
-ggplot(data=ClusterInfo.all, aes(x=Cluster,y=cells, fill=Batch)) +
-	theme(axis.text.x=element_text(angle = 90, hjust = 0)) +
-	geom_col() +
-	theme(legend.text = element_text(size = 7))
+# cluster cells
+sce_all$cluster_corrected <- clusterCells(sce_all, 
+                                          use.dimred = "corrected")
 
+# tabulate the number of cells from each batch per cluster
+batch_per_cluster <- table(Cluster = sce_all$cluster_corrected, Batch = sce_all$SampleName)
+
+# visualise distribution of samples per cluster
+as.data.frame(batch_per_cluster) %>%
+  ggplot(aes(Cluster, Freq)) +
+  geom_col(aes(fill = Batch)) +
+  labs(title = "Corrected data")
 ```
 
-The OSCA book favors a qualitative approach to assessing the degree of mixing between clusters where they compute the variance in the log-normalized abundances across batches for each cluster. A highly variable cluster has large relative differences in cell abundance across batches; this may be an indicator for incomplete batch correction, e.g., if the same cell type in two batches was not combined into a single cluster in the corrected data. We can then focus our attention on these clusters to determine whether they might pose a problem for downstream interpretation. Of course, a large variance can also be caused by genuinely batch-specific populations, so some prior knowledge about the biological context is necessary to distinguish between these two possibilities.
 
-```{r}
-var <- clusterAbundanceVar(all.tab)
+One approach to assess the degree of mixing between clusters is to calculate the variance in the log-normalized cell abundances across batches for each cluster. 
+A high variance value in this case represents a cluster with unequal representation of cells from each batch. 
+Therefore, those clusters with the highest variance values may be due to incomplete correction. 
+Alternatively, these may be due to true biological differences between batches (which could be investigated, for example, by looking at the expression of known cell-type-specific genes). 
 
-# Also printing the percentage of cells in each cluster in each batch:
-percent <- t(t(all.tab)/colSums(all.tab)) * 100 
-df <- DataFrame(Batch=unclass(percent), var=var)
-df[order(df$var, decreasing=TRUE),]
+```{r, purl=FALSE}
+# Check clusters with highest variance 
+cluster_var <- clusterAbundanceVar(sce_all$cluster_corrected, 
+                                   batch = sce_all$SampleName)
 
+# order abundance table from high-to-low variance
+batch_per_cluster[order(cluster_var, decreasing = TRUE), ]
 ```
+
+This is a qualitative, exploratory method to diagnose issues with batch correction. 
+As we can see from this table, this is a good indication of clusters with an extreme imbalance of cells from different clusters. 
+But we can see that there is a limitation in making strong conclusions from clusters that have an overal low number of cells. 
+
+<!-- 
+Hugo Note: I stopped revising the text from this point onwards.
+I revised the code to use consistent object names, but need to come back to finish this. 
+-->
 
 ### Preserving Biological Heterogeneity
 
 Another useful diagnostic check is to compare the pre-correction clustering of each batch to the clustering of the same cells in the corrected data. Accurate data integration should preserve population structure within each batch as there is no batch effect to remove between cells in the same batch. This check complements the previously mentioned diagnostics that only focus on the removal of differences between batches. Specifically, it protects us against scenarios where the correction method simply aggregates all cells together, which would achieve perfect mixing but also discard the biological heterogeneity of interest. Lets go back to our simple two sample example to look at some of the ways we can investigate.
 
-```{r}
-table(colLabels(ori.sce.sample.1))
+```{r, purl=FALSE}
+table(colLabels(sce_rep1))
 ```
 
-```{r}
-table(colLabels(ori.sce.sample.2))
+```{r, purl=FALSE}
+table(colLabels(sce_rep2))
 ```
 
 Ideally, we should see a many-to-1 mapping where the post-correction clustering is nested inside the pre-correction clustering. This indicates that any within-batch structure was preserved after correction while acknowledging that greater resolution is possible with more cells. We quantify this mapping using the nestedClusters() function from the bluster package, which identifies the nesting of post-correction clusters within the pre-correction clusters. Well-nested clusters have high `max` values, indicating that most of their cells are derived from a single pre-correction cluster.
 
-```{r}
-tab.sample.1 <- nestedClusters(ref=paste("before", colLabels(ori.sce.sample.1)),
-    alt=paste("after", mnn.clusters[mnn.out$batch==1]))
+```{r, purl=FALSE}
+tab.sample.1 <- nestedClusters(ref=paste("before", colLabels(sce_rep1)),
+                               alt=paste("after", sce[, colnames(sce_rep1)]$cluster_corrected))
 tab.sample.1$alt.mapping
 ```
 
 We can visualize this mapping for the samples. Ideally, each row should have a single dominant entry close to unity. Horizontal stripes are more concerning as these indicate that multiple pre-correction clusters were merged together, though the exact level of concern will depend on whether specific clusters of interest are gained or lost. In practice, more discrepancies can be expected even when the correction is perfect, due to the existence of closely related clusters that were arbitrarily separated in the within-batch clustering.
 
-```{r}
+```{r, purl=FALSE}
 # For the first batch:
 heat.sample.1 <- pheatmap(tab.sample.1$proportions, cluster_row=FALSE, cluster_col=FALSE,
                    main="Sample 1 comparison", silent=TRUE)
 
 # For the second batch:
-tab.sample.2 <- nestedClusters(ref=paste("before", colLabels(ori.sce.sample.2)),
-                        alt=paste("after", mnn.clusters[mnn.out$batch==2]))
+tab.sample.2 <- nestedClusters(ref=paste("before", colLabels(sce_rep2)),
+                        alt=paste("after", sce[, colnames(sce_rep2)]$cluster_corrected))
 heat.sample.2 <- pheatmap(tab.sample.2$proportions, cluster_row=FALSE, cluster_col=FALSE,
                    main="Sample 2 comparison", silent=TRUE)
 
@@ -381,26 +479,26 @@ gridExtra::grid.arrange(heat.sample.1[[4]], heat.sample.2[[4]])
 
 We use the adjusted Rand index to quantify the agreement between the clusterings before and after batch correction. Larger indices are more desirable as this indicates that within-batch heterogeneity is preserved, though this must be balanced against the ability of each method to actually perform batch correction.
 
-```{r}
-ri.sample.1 <- pairwiseRand(mnn.clusters[mnn.out$batch==1], colLabels(ori.sce.sample.1), mode="index")
+```{r, purl=FALSE}
+ri.sample.1 <- pairwiseRand(sce[, colnames(sce_rep1)]$cluster_corrected, colLabels(sce_rep1), mode="index")
 ri.sample.1
 ```
 
-```{r}
-ri.sample.2 <- pairwiseRand(mnn.clusters[mnn.out$batch==2], colLabels(ori.sce.sample.2), mode="index")
+```{r, purl=FALSE}
+ri.sample.2 <- pairwiseRand(sce[, colnames(sce_rep2)]$cluster_corrected, colLabels(sce_rep2), mode="index")
 ri.sample.2
 ```
 
 We can also break down the ARI into per-cluster ratios for more detailed diagnostics (Figure 2.2). For example, we could see low ratios off the diagonal if distinct clusters in the within-batch clustering were incorrectly aggregated in the merged clustering. Conversely, we might see low ratios on the diagonal if the correction inflated or introduced spurious heterogeneity inside a within-batch cluster.
 
-```{r}
+```{r, purl=FALSE}
 # For the first batch.
-tab <- pairwiseRand(colLabels(ori.sce.sample.1), mnn.clusters[mnn.out$batch==1])
+tab <- pairwiseRand(colLabels(sce_rep1), sce[, colnames(sce_rep1)]$cluster_uncorrected)
 heat.1 <- pheatmap(tab, cluster_row=FALSE, cluster_col=FALSE,
     col=rev(viridis::magma(100)), main="Sample 1 probabilities", silent=TRUE)
 
 # For the second batch.
-tab <- pairwiseRand(colLabels(ori.sce.sample.2), mnn.clusters[mnn.out$batch==2])
+tab <- pairwiseRand(colLabels(sce_rep2), sce[, colnames(sce_rep2)]$cluster_corrected)
 heat.2 <- pheatmap(tab, cluster_row=FALSE, cluster_col=FALSE,
     col=rev(viridis::magma(100)), main="Sample 2 probabilities", silent=TRUE)
 
@@ -412,14 +510,18 @@ gridExtra::grid.arrange(heat.1[[4]], heat.2[[4]])
 
 For fastMNN(), one useful diagnostic is the proportion of variance within each batch that is lost during MNN correction. Specifically, this refers to the within-batch variance that is removed during orthogonalization with respect to the average correction vector at each merge step. This is returned via the lost.var field in the metadata of mnn.out, which contains a matrix of the variance lost in each batch (column) at each merge step (row).
 
-```{r}
-metadata(mnn.out)$merge.info$lost.var
+```{r, purl=FALSE}
+metadata(sce_quick_mnn)$merge.info$lost.var
 ```
 
 Large proportions of lost variance (>10%) suggest that correction is removing genuine biological heterogeneity. This would occur due to violations of the assumption of orthogonality between the batch effect and the biological subspace (Haghverdi et al. 2018). In this case, the proportion of lost variance is smaller, indicating that non-orthogonality is not to much of a major concern.
 
 ## Session information
 
-```{r sessionInfo_dsi_PBMMC_ETV6-RUNX1}
+<details><summary>`sessionInfo()`</summary>
+
+```{r sessionInfo_dsi_PBMMC_ETV6-RUNX1, echo=FALSE, purl=FALSE}
 sessionInfo()
 ```
+
+</details>
