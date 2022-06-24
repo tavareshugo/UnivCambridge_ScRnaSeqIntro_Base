@@ -4,9 +4,8 @@ library(scater)
 library(scran)
 library(batchelor)
 library(bluster)
-library(tidyverse)
 library(pheatmap)
-library(BiocSingular)
+library(magrittr) # for the %>% pipe
 
 
 # read the data ----
@@ -91,7 +90,6 @@ mnn_corrected
 
 # store the corrected values in a new reducedDim in the original sce object
 reducedDim(sce, "corrected") <- reducedDim(mnn_corrected, "corrected")
-
 
 # Visualise corrected data ----
 

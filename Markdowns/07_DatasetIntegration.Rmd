@@ -6,7 +6,6 @@ output:
   html_document:
     df_print: paged
     toc: yes
-    toc_float: true
     number_sections: true
     css: ../css/boxes.css
 ---
@@ -53,9 +52,8 @@ library(scater)
 library(scran)
 library(batchelor)
 library(bluster)
-library(tidyverse)
 library(pheatmap)
-library(BiocSingular)
+library(magrittr) # for the %>% pipe
 ```
 
 To exemplify the integration process, we will start with data that was prepared for demonstration purposes (we will use our previous SCE object in a later exercise). 
