@@ -1,7 +1,7 @@
 ---
 title: "Introduction to single-cell RNA-seq analysis - Normalisation"
 author: "Stephane Ballereau"
-date: "February 2022"
+date: "June 2022"
 output:
   ioslides_presentation:
     logo: ../Images/uniOfCamCrukLogos.png
@@ -166,7 +166,9 @@ knitr::include_graphics("../Images/sctransform2.png", auto_pdf = TRUE)
 
 Early methods developed for bulk RNA-seq are not appropriate for sparse scRNA-seq data.
 
-The deconvolution method draws information from pools of cells to derive cell-based scaling factors.
+Simple scaling methods are ok for clustering.
+
+The deconvolution method draws information from pools of cells to derive cell-based scaling factors that account for composition bias.
 
 The sctransform method uses sequencing depth and information across genes to stabilise expression variance across the expression range.
 

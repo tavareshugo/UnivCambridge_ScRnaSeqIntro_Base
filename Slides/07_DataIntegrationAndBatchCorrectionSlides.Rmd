@@ -5,17 +5,11 @@ date: "11th February 2022"
 output:
   ioslides_presentation:
     css: css/stylesheet.css
-    logo: ../Images/CRUK_CC_whiteBgd.jpg
+    logo: ../Images/uniOfCamCrukLogos.png
     smaller: yes
     widescreen: yes
   beamer_presentation: default
 ---
-
-```{r include=FALSE}
-library(tidyr)
-library(dplyr)
-
-```
 
 ## Workflow
 
@@ -35,11 +29,11 @@ library(dplyr)
 
 ## Formatting our data
 
-A few ways our data can be arranged (software dependent too)
+A few ways our data can be arranged (software-dependent too)
 
-- single sample SCE objects QCed in isolation
+- one large SCE object containing many samples
 
-- large SCE object containing many samples
+- many single-sample SCE objects, QC'd in isolation
 
 - multiple large SCE objects with multiple samples
 
@@ -67,14 +61,19 @@ A useful quick look
 
 - Gaussian/Linear Regression - removeBatchEffect (limma), comBat (sva), rescaleBatches or regressBatches (batchelor)
 
-- Mutual nearest neighbour correction - Haghverdi et al 2018 Nature Biotechnology
+- Mutual Nearest Neighbours (MNN) correction - [Haghverdi et al 2018](https://www.nature.com/articles/nbt.4091)
 
   - mnnCorrect (batchelor)
   
   - FastMNN (batchelor)
 
+- And [many more](https://www.scrna-tools.org/tools?sort=name&cats=Integration)! 
 
-## FastMNN
+  - Different methods may have strenghts and weaknesses
+
+  - [Benchmark studies](https://theislab.github.io/scib-reproducibility/) can be used as a reference to choose suitable method
+
+## FastMNN ([Haghverdi et al 2018](https://www.nature.com/articles/nbt.4091))
 
 1. Perform a multi-sample PCA on the (cosine-)normalized expression values to reduce dimensionality.
 2. Identify MNN pairs in the low-dimensional space between a reference batch and a target batch.
@@ -84,7 +83,15 @@ A useful quick look
 
 <img src="../Images/MNNcorrect.jpeg" class="center" style="width: 50%; margin-top: 40px;">
 
-Haghverdi L, Lun ATL, Morgan MD, Marioni JC (2018). Batch effects in single-cell RNA-sequencing data are corrected by matching mutual nearest neighbors. Nat. Biotechnol. 36(5):421
+## FastMNN ([Haghverdi et al 2018](https://www.nature.com/articles/nbt.4091))
+
+Assumptions (quoted from the paper): 
+
+1. There is at least one cell population that is present in both batches, 
+2. the batch effect is almost orthogonal [i.e. uncorrelated] to the biological subspace, and 
+3. the batch-effect variation is much smaller than the biological-effect variation between different cell types
+
+<img src="../Images/MNNcorrect.jpeg" class="center" style="width: 50%; margin-top: 40px;">
 
 ## Checking our correction has worked
 
