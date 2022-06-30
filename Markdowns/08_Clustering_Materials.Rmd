@@ -5,8 +5,10 @@ date: "May 2022"
 subtitle: Clustering
 output:
   html_notebook:
+    df_print: paged
     toc: yes
-    toc_depth: 2
+    number_sections: true
+    css: ../css/boxes.css
 ---
 
 ```{r knitr_options, echo=FALSE, results="hide", message=FALSE}
@@ -215,7 +217,7 @@ legend('bottomright',
        pt.cex=1, cex=.6, bty="n", ncol=1)
 ```
 
-More commonly we will visualise the clusters by superimposing them on a tSNE or
+More commonly we will visualise the clusters by superimposing them on a t-SNE or
 UMAP plot. We can store the clusters in the `sce` object `colData`.
 
 ```{r}
@@ -226,7 +228,7 @@ plotReducedDim(sce,
                text_by = "Clusters1")
 ```
 
-### Modularity
+# Modularity
 
 Several methods to detect clusters ('communities') in networks rely on a metric
 called "modularity". For a given partition of cells into clusters, modularity
@@ -234,7 +236,7 @@ measures how separated clusters are from each other, based on the difference
 between the observed and expected weight of edges between nodes. For the whole
 graph, the closer to 1 the better.
 
-### The Walktrap method
+# The Walktrap method
 
 The walktrap method relies on short random walks (a few steps) through the
 network. These walks tend to be 'trapped' in highly-connected regions of the
@@ -280,7 +282,7 @@ table(sce$walktrap15, sce$SampleName) %>%
 ```
 
 Most clusters comprise cells from several replicates of a same sample type,
-cluster 7 appears to be predominantly cells from the ETV6-RUNX samples.
+cluster 6 appears to be predominantly cells from the ETV6-RUNX samples.
 
 We can visualise this on the TSNE:
 
@@ -360,7 +362,7 @@ plotReducedDim(sce,
   facet_wrap("SampleGroup")
 ```
 
-#### The Leiden method
+# The Leiden method
 
 The Leiden method improves on the Louvain method by guaranteeing that at each
 iteration clusters are connected and well-separated. The method includes an
@@ -371,17 +373,44 @@ article](https://www.nature.com/articles/s41598-019-41695-z#Fig3).
 
 <img src="../Images/leiden_Fig3_HTML.png" style="margin:auto; display:block" />
 
+:::exercise
+
+For this exercise please run the clustering again, this time using the "leiden",
+method.
+
+Set the *k* to *20* and add the results of the clustering to the `sce` object
+in a new column called "leiden20".
+
+How many clusters does this result in?
+
+Visualize the clusters by plotting the t-SNE with the cells coloured according
+to your new clustering.
+
+<details><summary>Hint</summary>
+ 
+You will need to change the `k` parameter and the `cluster.fun` parameter
+in the SNNGraphParam object used in the `clusterCells` function.
+
+</details>
+
+<details><summary>Answer</summary>
+
+First run the clustering with `clusterCells`:
 
 ```{r}
 sce$leiden20 <- clusterCells(sce, 
                            use.dimred = "corrected", 
-                           BLUSPARAM = SNNGraphParam(k = 20, cluster.fun = "leiden"))
+                           BLUSPARAM = SNNGraphParam(k = 20, 
+                                                     cluster.fun = "leiden"))
 ```
 
+We can quickly look at the results by summarising using `table`.
 
 ```{r}
 table(sce$leiden20)
 ```
+
+There are 11 clusters, although cluster 6 contains only 1 cell.
 
 The t-SNE plot shows cells color-coded by cluster membership:
 
@@ -392,6 +421,8 @@ plotReducedDim(sce,
                text_by = "leiden20")
 ```
 
+</details>
+:::
 
 # Assessing cluster behaviour
 
@@ -435,12 +466,14 @@ either its current cluster or, if the cell has a negative silhouette width, the
 cluster that it is closest to.
 
 ```{r}
-silPlot.dat <- sil.approx %>% 
-  as.data.frame() %>% 
-  mutate(closestCluster = ifelse(width > 0, cluster, other) %>% factor())
-
-ggplot(silPlot.dat, aes(x=cluster, y=width, colour=closestCluster)) +
-  ggbeeswarm::geom_quasirandom(method="smiley")
+plotSilBeeswarm <- function(silDat){
+  silDat %>% 
+    as.data.frame() %>% 
+    mutate(closestCluster = ifelse(width > 0, cluster, other) %>% factor()) %>% 
+      ggplot(aes(x=cluster, y=width, colour=closestCluster)) +
+        ggbeeswarm::geom_quasirandom(method="smiley")
+}
+plotSilBeeswarm(sil.approx)
 ```
 
 We could also look at the correspondence between different clusters by plotting
@@ -451,8 +484,10 @@ strong diagonal band and only a few off-diagonal tiles containing small number
 of cells.
 
 ```{r}
-plotSilGrid <- function(dat){
-  dat %>% 
+plotSilGrid <- function(silDat){
+  silDat %>% 
+    as.data.frame() %>% 
+    mutate(closestCluster = ifelse(width > 0, cluster, other) %>% factor()) %>% 
     count(cluster, closestCluster,  name="olap") %>% 
     group_by(cluster) %>% 
     mutate(total  = sum(olap)) %>% 
@@ -470,28 +505,23 @@ plotSilGrid <- function(dat){
           aspect.ratio = 1,
           panel.background = element_blank())
 }
-plotSilGrid(silPlot.dat)
+plotSilGrid(sil.approx)
 ```
 From these two plots we can see that clusters 5 and 6 appear to have a good
 degree of separation. In contrast, clusters 1 and 3 have a large number of
 cells that appear to be closer to cluster 2. It is possible clusters 1-3 contain
 a degree of heterogeneity that suggests further splitting of these clusters may
-be required - perhaps there should more than 9 clusters to adequately reflect
-the biology.
+be required.
 
 Let's do the same plots with the walktrap clusters generated with *k*=15.
 
 ```{r}
 sil.approx <- approxSilhouette(reducedDim(sce, "corrected"),
                                clusters=sce$walktrap15)
-silPlot.dat <- sil.approx %>% 
-  as.data.frame() %>% 
-  mutate(closestCluster = ifelse(width > 0, cluster, other) %>% factor())
 
-ggplot(silPlot.dat, aes(x=cluster, y=width, colour=closestCluster)) +
-  ggbeeswarm::geom_quasirandom(method="smiley")
+plotSilBeeswarm(sil.approx)
 
-plotSilGrid(silPlot.dat)
+plotSilGrid(sil.approx)
 ```
 
 This clustering appears to have generated a set of clusters with better
@@ -501,14 +531,10 @@ And again with the louvain clusters
 
 ```{r}
 sil.approx <- approxSilhouette(reducedDim(sce, "corrected"), clusters=sce$louvain15)
-silPlot.dat <- sil.approx %>% 
-  as.data.frame() %>% 
-  mutate(closestCluster = ifelse(width > 0, cluster, other) %>% factor())
 
-ggplot(silPlot.dat, aes(x=cluster, y=width, colour=closestCluster)) +
-  ggbeeswarm::geom_quasirandom(method="smiley")
+plotSilBeeswarm(sil.approx)
 
-plotSilGrid(silPlot.dat)
+plotSilGrid(sil.approx)
 ```
 There seems to be a greater degree of overlap between these clusters,
 perhaps more resolution would improve this clustering - we might 
@@ -556,7 +582,7 @@ plot(cluster.gr,
      layout=igraph::layout_with_lgl)
 ```
 
-# Comparing two sets of clusters
+## Comparing two sets of clusters
 
 The wide variety of clustering algorithms available and their differing outputs
 reflect the different ways that it is possible to view out data in
@@ -600,7 +626,7 @@ out <- clusterSweep(reducedDim(sce, "corrected"),
                     BLUSPARAM = NNGraphParam(),
                     k = as.integer(c(5, 10, 15, 20, 25)),
                     cluster.fun = "walktrap",
-                    BPPARAM=BiocParallel::MulticoreParam(5))
+                    BPPARAM=BiocParallel::MulticoreParam(7))
 ```
 
 The resulting object is list containing a DataFrame with the clusters for each
@@ -656,14 +682,6 @@ colnames(jacc.mat) <- paste("Walktrap_15", colnames(jacc.mat))
 pheatmap(jacc.mat, color=viridis::viridis(100), cluster_cols=FALSE, cluster_rows=FALSE)
 ```
 
-Finally, we can add all (or a subset) of the clusterings from `clusterSweep` to
-our SCE object.
-
-```{r}
-colData(sce) <- cbind(colData(sce), DataFrame(out$clusters))
-```
-
-
 The [OSCA
 book](http://bioconductor.org/books/release/OSCA.advanced/clustering-redux.html#comparing-different-clusterings)
 provides some additional methods for comparing different clusterings that can be
@@ -674,6 +692,122 @@ In this section, we have just done a sweep changing the *k*, but it is also
 possible to combine this with multiple clustering algorithms and multiple edge
 weightings.
 
+:::exercise
+
+For this exercise, you will rerun `clusterSweep`with additional parameters.This time:
+
+* test the walktrap, louvain and leiden methods
+* test *k* set to 10, 15, 20 and 25
+
+This will test 12 different clusterings.
+
+<details><summary>Hint</summary>
+
+This time, as well as setting the `k` parameter to a vector that contains 10,
+15, 20 and 25, you will also need to provide the `cluster.fun` parameter with a
+vector containing the names of the three different clustering methods.
+
+</details>
+
+<details><summary>Answer</summary>
+
+```{r}
+out <- clusterSweep(reducedDim(sce, "corrected"),
+                    BLUSPARAM = NNGraphParam(),
+                    k = as.integer(c(10, 15, 20, 25)),
+                    cluster.fun = c("walktrap", "louvain", "leiden"),
+                    BPPARAM=BiocParallel::MulticoreParam(7))
+```
+
+</details>
+
+Now plot the number of clusters generated by each clustering and the mean silhouette width.
+You will need to adjust the plotting parameters to plot a different coloured line for each
+clustering algorithm (walktap, louvain and leiden).
+
+```{r eval=FALSE}
+df <- as.data.frame(out$parameters)
+
+# get the number of clusters
+df$num.clusters <- apply(out$clusters, 2, max)
+
+# get the mean silhouette width
+getMeanSil <- function(cluster) {
+    sil <- approxSilhouette(reducedDim(sce, "corrected"), cluster)
+    mean(sil$width)
+}
+df$silhouette <- map_dbl(as.list(out$clusters), getMeanSil)
+
+nclPlot <- FIXME
+
+silPlot <- FIXME
+
+nclPlot + silPlot
+```
+
+<details><summary>Hint</summary>
+You will need to add the term `aes(colour = cluster.fun)` into the `geom_line` function. 
+This will instruct ggplot2 to plot a different coloured line for clustering function.
+</details>
+
+<details><summary>Answer</summary>
+
+```{r}
+df <- as.data.frame(out$parameters)
+
+# get the number of clusters
+df$num.clusters <- apply(out$clusters, 2, max)
+
+# get the mean silhouette width
+getMeanSil <- function(cluster) {
+    sil <- approxSilhouette(reducedDim(sce, "corrected"), cluster)
+    mean(sil$width)
+}
+df$silhouette <- map_dbl(as.list(out$clusters), getMeanSil)
+
+nclPlot <- ggplot(df, aes(x = k, y = num.clusters)) + 
+                  geom_line(aes(colour=cluster.fun), lwd=2)
+silPlot <- ggplot(df, aes(x = k, y = silhouette)) + 
+                  geom_line(aes(colour=cluster.fun), lwd=2)
+nclPlot + silPlot
+```
+
+</details>
+
+**Bonus:** if you have time, select 1 or 2 of the clusterings, calculate the
+silhouette widths and examine them further using the beeswarm plot and the
+silhouette grid.
+
+<details><summary>Hint</summary>
+We have not yet added the clusters to our sce object, so when running
+`approxSilhouette` you will need to use the clustering directly `clusters`
+object in the `out` list generated by `clusterSweep`.
+</details>
+
+<details><summary>Answer</summary>
+
+For example, we could take a look at the louvain with k = 10.
+
+```{r }
+sil.approx <- approxSilhouette(reducedDim(sce, "corrected"), 
+                               clusters=out$clusters$k.10_cluster.fun.louvain)
+
+plotSilBeeswarm(sil.approx)
+
+plotSilGrid(sil.approx)
+```
+</details>
+
+:::
+
+Finally, we can add all (or a subset) of the clusterings from `clusterSweep` to
+our SCE object.
+
+```{r}
+colData(sce) <- cbind(colData(sce), DataFrame(out$clusters))
+```
+
+
 # Finalise clustering selection
 
 When you have come to a decision about which clustering to use it is convenient
@@ -682,7 +816,7 @@ This means downstream code does not need to be changed should you later decide
 to switch to a different clustering (and makes the code easily re-usable for 
 different analyses).
 
-For now we will use the walktrap k=25 clustering.
+For now we will use the walktrap k=20 clustering.
 
 ```{r}
 colLabels(sce) <- sce$k.20_cluster.fun.walktrap
@@ -741,14 +875,17 @@ plotExpression(sce,
                features=c("MS4A1", "CD79A"))
 ```
 
-
 ## Monocyte markers
 
 ```{r fig.height=6, fig.width=12}
-p1 <- plotTSNE(sce, by_exprs_values = "reconstructed",
+p1 <- plotReducedDim(sce, 
+               dimred = "TSNE_corrected",
+               by_exprs_values = "logcounts",
                colour_by = "FCGR3A",
                text_by = "label")
-p2 <- plotTSNE(sce, by_exprs_values = "reconstructed", 
+p2 <- plotReducedDim(sce, 
+               dimred = "TSNE_corrected", 
+               by_exprs_values = "logcounts",
                colour_by = "MS4A7",
                text_by = "label")
 p1 + p2
@@ -756,7 +893,7 @@ p1 + p2
 
 ```{r fig.height=6, fig.width=12}
 plotExpression(sce, 
-               exprs_values = "reconstructed",
+               exprs_values = "logcounts",
                x = "label", 
                colour_by = "label",
                features=c("FCGR3A", "MS4A7"))
@@ -765,10 +902,14 @@ plotExpression(sce,
 ## Dendritic cell markers
 
 ```{r fig.height=6, fig.width=12}
-p1 <- plotTSNE(sce, by_exprs_values = "reconstructed", 
+p1 <- plotReducedDim(sce, 
+               dimred = "TSNE_corrected",
+               by_exprs_values = "logcounts",
                colour_by = "FCER1A",
                text_by = "label")
-p2 <- plotTSNE(sce, by_exprs_values = "reconstructed", 
+p2 <- plotReducedDim(sce, 
+               dimred = "TSNE_corrected",
+               by_exprs_values = "logcounts",
                colour_by = "CST3",
                text_by = "label")
 p1 + p2
@@ -776,7 +917,7 @@ p1 + p2
 
 ```{r fig.height=6, fig.width=12}
 plotExpression(sce, 
-               exprs_values = "reconstructed",
+               exprs_values = "logcounts",
                x = "label", 
                colour_by = "label",
                features=c("FCER1A", "CST3"))
