@@ -1,7 +1,7 @@
 ---
 title: "Marker Gene Identification"
-author: "Zeynep Kalender-Atak; Hugo Tavares"
-date: 'Nov 2021'
+author: "Ashley Sawle, Zeynep Kalender-Atak, Hugo Tavares"
+date: 'Jun 2022'
 output:
   ioslides_presentation:
     widescreen: true
@@ -18,167 +18,85 @@ knitr::include_graphics('Images/workflow2_cluMarkerGenes.png')
 
 ## Identifying Cluster Marker Genes
 
-```{r echo=FALSE, out.width= "50%", out.extra='style="float:left; padding:20px"'}
+```{r echo=FALSE, out.width= "50%", out.extra='style="float:left; padding:30px"'}
 knitr::include_graphics('Images/tsne_clusters.png')
 ```
 
 Our goal is to identify genes that are differently expressed between clusters
 
-* exclusively expressed in a single cluster or not
+Calculate effect sizes that capture differences in:
 
-* different methods that test for:
+* mean expression level
+* rank of expression
+* proportion of cells expressing the gene
 
-  * differences in the mean expression level
-  
-  * differences in the rank of expression
-  
-  * differences in the proportion of cells expressing the gene
-  
-* compile a summary table
+These are calculated in pairwise cluster comparisons.
 
 
-## Differential expression
+## Cohen's _d_: mean difference
 
-* Differential expression is comparative. Common comparisons include: 
+* Log(fold change) of mean gene expression, standardized by the average standard deviation across the groups.
+* Positive value indicates upregulation in the cluster of interest, and vice-versa.
 
-* pairwise cluster comparisons
 
-    + eg. cluster 1 vs cluster2, cluster 1 vs cluster 3, cluster 2 vs cluster 3, etc...
+## AUC: rank difference
 
-* for a given cluster find 'marker genes' that are: 
+* "Area Under the Curve" quantifies the ability to distinguish between two gene expression distributions.
+* Measures the likelihood that a random cell in the cluster of interest has a higher expression of the gene than a random cell in the other cluster.
+* Takes no account of the magnitude of gene expression.
+* Ranges from 0 to 1, which can be interpreted as:
+    + 1 = upregulation
+    + 0 = downregulation
+    + 0.5 = no difference
 
-    + DE compared to at least one other cluster
-    + DE compared to each of the other clusters
-    + DE compared to “most” of the other clusters
-    + DE and up-regulated (easier to interpret)
-    
-* cell-type comparisons (if cell type is known) - with and without clustering
 
-## `findMarkers`
+## Detection rate difference
 
-```{r, eval=FALSE}
-findMarkers(
+* Log(fold change) in the proportion of cells in which the gene is detected (counts > 0) in the cluster of interest versus the proportion of cells in which the gene is detected in the other cluster.
+* Takes no account of the magnitude of gene expression.
+* Positive values indicate that the gene is detected in more cells in the cluster of interest than the other cluster.
+
+
+## `scran::scoreMarkers()` function
+
+For each cluster the function computes the effect size scores between it and every
+other cluster. 
+
+```r
+scoreMarkers(
   sce, 
-  groups = sce$louvain,       # clusters to compare
+  groups = sce$louvain15      # clusters to compare
   block = sce$SampleGroup,    # covariates in statistical model
-  test.type = "t",            # t-test (default)
-  direction = "any",          # test for either higher or lower expression (default)
-  lfc = 0,                    # null hypothesis log-fold-change = 0 (default)
-  pval.type = "any"           # ranking of p-values based on any comparison (default)
 )
 ```
 
+Outputs a list of `DataFrame` with summary statistics for the metrics we just covered (columns named with suffix `cohen`, `AUC` and `detected`).
 
 
-## `findMarkers`
+## `scran::scoreMarkers()`: summary statistics
 
-```{r, eval=FALSE}
-findMarkers(
-  sce, 
-  groups = sce$louvain,       # clusters to compare
-  block = sce$SampleGroup,    # covariates in statistical model
-  test.type = "t",            # t-test (default)
-  direction = "any",          # test for either higher or lower expression (default)
-  lfc = 0,                    # null hypothesis log-fold-change = 0 (default)
-  pval.type = "any"           # ranking of p-values based on any comparison (default)
-)
-```
-
-
-```{r echo=FALSE, out.width='90%', fig.align='center'}
-knitr::include_graphics('Images/findmarkers_testType.png')
-```
-
-
-## Gene-wise null hypothesis
-
-* t-test: "Is the mean expression of a gene in cluster 1 and cluster 2 the same?"
-
-* Wilcoxon rank-sum test: "It is equally likely that a randomly selected cell from cluster 1 has higher or lower expression of a gene than a randomly selected cell from cluster 2?"
-
-* Binomial test: "Is the probability of a gene being expressed the same in cluster 1 and cluster 2?"
-
-
-## Statistical challenges
-
-```{r echo=FALSE, out.width= "45%", out.extra='style="float:left; padding:30px"'}
-knitr::include_graphics('Images/marker_gene_distributions.png')
-```
-
-To an extent, all these models poorly capture the underlying features of the data.
-
-* high noise levels (technical and biological factors)
-
-* small library sizes 
-
-* small amounts of available mRNAs result in amplification biases and dropout events 
-
-* 3' bias, partial coverage, uneven depth of transcripts
-
-* stochastic nature of transcription 
-
-* multimodality in gene expression (presence of multiple possible cell states within a cell population)
-
-<!--
-## Parametric vs Non-parametric tests 
-
-* The better a model captures the data, the better (more accurate) are the statistical inferences
-
-* When we cannot fit a model to our data, we resort to non-parametric models (e.g. Wilcoxon rank-sum test, Kruskal-Wallis, Kolmogorov-Smirnov test)
-
-* Non-parametric tests generally convert observed expression values to ranks
-
-* They test whether the distribution of ranks for one group are significantly different from the distribution of ranks for the other group
-
-* May fail in presence of large number of tied values, such as the case of dropouts (zeros) in scRNA-seq
-
-* If the conditions for a parametric test hold, then it will be typically more powerful than a non-parametric test
--->
-
-
-## Performance of different tests 
-
-```{r echo=FALSE, out.width= "40%", out.extra='style="float:left; padding:30px;  margin-top: -85px"'}
-knitr::include_graphics('Images/DE_performance.png')
-```
-
-However:
-
-* t-test and Wilcoxon rank-sum test work well in practice, given at least few dozens cells to compare
-
-* Bulk RNA-seq analysis methods do not generally perform worse than those specifically developed for scRNA-seq
-
-* Filtering out lowly expressed genes in quite important for good performance of bulk methods (edgeR, DEseq2)
-
-(source: [Soneson & Robinson 2018](https://doi.org/10.1038/nmeth.4612))
+* **mean.X** - mean score across all pairwise comparisons.
+* **min.X** - minimum score obtained across all pairwise comparisons. Most stringent statistic: high score indicates  upregulation relative to *all* other clusters. 
+* **median.X** - median score across all pairwise comparisons. More robust to outliers than the mean. 
+* **max.X** - maximum score obtained across all pairwise comparisons. The least stringent summary statistic: a high score only indicates that the gene is upregulated relative to *at least one* other cluster.
+* **rank.X** - minimum ranking ("min-rank") of that gene's score across all clusters. A rank of 1 indicates that gene had the highest score in at least one of the pairwise comparisons.
 
 
 ## So, what's really important? 
 
-* understand what are we trying to compare with the different tests (difference in mean expression, difference in probability of being expressed, probability of being highly/lowly expressed)
+* Understand what are we trying to compare with the different scores:
+    + difference in mean expression
+    + probability of being highly/lowly expressed
+    + difference in probability of being expressed)
 
-* It’s important to understand the underlying data
+* Strictly speaking, identifying genes differentially expressed between clusters is statistically flawed, since the clusters were themselves defined based on the gene expression data itself. Validation is crucial as a follow-up from these analyses.
 
-* It’s important to assess and **validate the results**
+* Do not use batch-integrated expression data for calculating marker gene scores, instead, **include batch in the statistical model** (the `scoreMarkers()` function has the `block` argument to achieve this).
 
-  * Strictly speaking, identifying genes differentially expressed between clusters is statistically flawed, since the clusters were themselves defined based on the gene expression data itself. Validation is crucial as a follow-up from these analyses.
-
-
-## Things to think about: during analysis
-
-* Do not use batch-integrated expression data for differential analysis
-
-  * Instead, **include batch in the statistical model** (the `findMarkers()` function has the `block` argument to achieve this)
-
-* Depending on the method you choose use: counts, normalised counts or log-normalized counts.
-
-* Normalization strategy has a big influence on the results in differential expression.
-
-    * e.g comparing cell types with few expressed genes vs a cell type with many genes.
-
-
-## Things to think about: after analysis
+* Normalization strategy has a big influence on the results in differences in expression between cell and between clusters.
 
 * A lot of what you get might be noise. Take two random set of cells and run DE and you probably with have a few significant genes with most of the commonly used tests.
 
-* Think of the results as hypotheses that need independent verification (e.g. microscopy, qPCR)
+* It’s important to assess and **validate the results**. Think of the results as
+hypotheses that need independent verification (e.g. microscopy, qPCR)
+
