@@ -1,59 +1,38 @@
 ---
-title: "Introduction to single-cell RNA-seq analysis - Clustering"
-author: "Stephane Ballereau"
-date: "February 2022"
+title: "Clustering"
+author: "Ashley Sawle"
+date: 'April 2022'
 output:
   ioslides_presentation:
-    logo: ../Images/uniOfCamCrukLogos.png
-    smaller: yes
-    widescreen: yes
+    widescreen: true
+    smaller: true
+    logo: Images/uniOfCamCrukLogos.png
     css: css/stylesheet.css
-  slidy_presentation: default
-  beamer_presentation: default
 ---
-    
-<!--
-    logo: Images/CRUK_CC_web.jpg
--->
 
 ```{r include=FALSE}
 library(tidyr)
 library(dplyr)
-#source("SOME_SCRIPT.R")
 ```
-
-## Outline
-
-* Motivation
-
-* Initial methods
-
-* Graph-based methods
-  * walktrap
-  * louvain
-  * leiden
 
 ## Single Cell RNAseq Analysis Workflow
 
 ```{r, echo=FALSE, out.width='70%', fig.align='center'}
-knitr::include_graphics('../Images/workflow2_clustering.png')
+knitr::include_graphics('Images/workflow2_clustering.png')
 ```
 
 ## Motivation
 
-The data has been QCed and normalized, confounders removed, noise limited, 
-dimensionality reduced.
+The data has been QC'd and normalized, and batch corrected.
   
 We can now ask biological questions.
 
-* *de novo* discovery and annotation of cell-types based on transcription profiles
+* unsupervised clustering: identification of groups of cells based on the
+similarities of the transcriptomes without any prior knowledge of the labels
+usually using the PCA output
 
-* unsupervised clustering:
-
-  * identification of groups of cells
-  * based on the similarities of the transcriptomes
-  * without any prior knowledge of the labels
-  * usually using the PCA output
+* *de novo* discovery and annotation of cell-types based on transcription
+profiles
 
 ## Single Cell RNAseq Analysis Workflow
 
@@ -61,169 +40,26 @@ We can now ask biological questions.
 knitr::include_graphics("../Images/Andrews2017_Fig1.png", auto_pdf = TRUE)
 ```
 
-## Motivation
-
-We will introduce three widely used clustering methods:
-
-* hierarchical
-* k-means
-* graph-based 
-
-The first two were developed first and are faster for small data sets.
-
-The third is more recent and better suited for scRNA-seq, especially large data sets.
-
-All three identify non-overlapping clusters.
-
-## Hierarchical clustering
-
-Hierarchical clustering builds:
-
-* a hierarchy of clusters
-* yielding a dendrogram (i.e. tree)
-  * that groups together cells with similar expression patterns
-  * across the chosen genes.
-
-There are two types of strategies:
-
-* Agglomerative (bottom-up):
-  * each observation (cell) starts in its own cluster,
-  * pairs of clusters are merged as one moves up the hierarchy.
-* Divisive (top-down):
-  * all observations (cells) start in one cluster,
-  * splits are performed recursively as one moves down the hierarchy.
-
-<!-- ## Hierarchical 
-
-```{r clust-hierarch-raw, echo=FALSE, out.height = '30%', fig.align='center'}
-knitr::include_graphics("../Images/bioCellGenHierar1.png")
-```
--->
-
-<!-- ## Hierarchical 
-
-```{r clust-hierarch-dendr, echo=FALSE, out.height = '30%', fig.align='center'}
-knitr::include_graphics("../Images/bioCellGenHierar2.png")
-```
--->
-
-## Hierarchical clustering {.columns-2 .smaller}
-
-The raw data:
-
-```{r, echo=FALSE, out.width = '40%', fig.align='center'}
-knitr::include_graphics("../Images/bioCellGenHierar1.png")
-```
-
-<p class="forceBreak"></p>
-
-The hierarchical clustering dendrogram:
-
-```{r, echo=FALSE, out.width = '60%', fig.align='center'}
-knitr::include_graphics("../Images/bioCellGenHierar2.png")
-```
-
-## Hierarchical clustering {.columns-2 .smaller}
-
-Example: the Caron data set:
-
-```{r clust-hierarch-dendr-caron, echo=FALSE, out.height = '80%', out.width = '80%',  fig.align='center'}
-knitr::include_graphics("../Images/clustHierar3.png")
-```
-
-<p class="forceBreak"></p>
-
-Pros:
-
-* deterministic method
-* returns partitions at all levels along the dendrogram
-    
-Cons:
-
-* computationally expensive in time and memory
-  * that increase proportionally
-  * to the square of the number of data points
-
-## k-means clustering {.columns-2 .smaller}
-
-Goal: partition cells into k different clusters.
-
-In an iterative manner,
-
-* cluster centers are defined
-* each cell is assigned to its nearest cluster
-
-Aim:
-
-* minimise within-cluster variation
-* maximise between-cluster variation
-
-<p class="forceBreak"></p>
-
-Pros:
-
-  * fast
-    
-Cons:
-
-  * assumes a pre-determined number of clusters
-  * sensitive to outliers
-  * tends to define equally-sized clusters
-    
-## k-means clustering
-
-```{r, echo=FALSE, out.width = '100%'}
-knitr::include_graphics("../Images/bioCellGenKmean.png", auto_pdf = TRUE)
-```
-
-Set of steps to repeat:
-
-* randomly select k data points to serve as initial cluster centers,
-* for each centers, 1) compute distance to centroids, 2) assign to closest cluster,
-* calculate the mean of each cluster (the ‘mean’ in ‘k-mean’) to define its centroid,
-* for each point compute the distance to these means to choose the closest,
-* repeat until the distance between centroids and data points is minimal (ie clusters do not change)
-  or the maximum number of iterations is reached,
-compute the total variation within clusters
-
-<!--
-**=> assign new centroids and repeat steps above**
--->
-
-## Separatedness
-
-Congruence of clusters may be assessed by computing the sillhouette for each cell.
-
-The larger the value the closer the cell to cells in its cluster than to cells in other clusters.
-
-Cells closer to cells in other clusters have a negative value.
-
-Good cluster separation is indicated by clusters whose cells have large silhouette values.
-
-```{r, echo=FALSE, out.width = '100%'}
-knitr::include_graphics("../Images/clustKmeansBoth.png", auto_pdf = TRUE)
-```
-
-
 ## Graph-based clustering {.columns-2 .smaller}
 
 Nearest-Neighbour (NN) graph:
 
   * cells as nodes
   * their similarity as edges
+
+In a NN graph two nodes (cells), say X and Y, are connected by an edge if:
+
+* the distance between them is amongst the **k** smallest distances from X to
+other cells, ‘**K**NN’  
+
+or  
+
+* the above plus the distance between them is amongst the **k** smallest
+distances from X to other cells **shared**-NN (‘**S**NN).
   
-Aim: identify ‘communities’ of cells within the network
+Once edges have been defined, they can be weighted by various metrics.
 
-In a NN graph two nodes (cells), say X and Y, are connected by an edge:
-
-if the distance between them is amongst:
-
-  * the **k** smallest distances from X to other cells, ‘**K**NN’)
-  * and from Y to other cells for **shared**-NN, ‘**S**NN’.
-  
 <p class="forceBreak"></p>
-
-Clusters are identified using metrics related to the number of neighbours (‘connections’) to find groups of highly interconnected cells.
 
 ```{r, include=FALSE}
 require(igraph)
@@ -248,7 +84,7 @@ plot.igraph(
 
 Example with different numbers of neighbours:
 
-```{r, echo=FALSE, out.height='60%', out.width = '60%', fig.align="center"}
+```{r, echo=FALSE, out.height='100%', out.width = '100%', fig.align="center"}
 knitr::include_graphics("../Images/bioCellGenGraphDeng2.png", auto_pdf = TRUE)
 ```
 
@@ -257,22 +93,25 @@ knitr::include_graphics("../Images/bioCellGenGraphDeng2.png", auto_pdf = TRUE)
 Pros
 
   * fast and memory efficient (no distance matrix for all pairs of cells)
-  * no assumptions on the shape of the clusters or the distribution of cells within each cluster
+  * no assumptions on the shape of the clusters or the distribution of cells
+  within each cluster
   * no need to specify a number of clusters to identify
   
 Cons
 
-  * loss of information beyond neighboring cells, which can affect community detection in regions with many cells.
+  * loss of information beyond neighboring cells, which can affect community
+  detection in regions with many cells.
 
 ## Modularity
 
-Several methods to detect clusters (‘communities’) in networks rely on the ‘modulatrity’ metric.
+Several methods to detect clusters (‘communities’) in networks rely on the
+‘modularity’ metric.
 
-For a given partition of cells into clusters,
+Modularity measures how separated clusters are from each other.
 
-modularity measures how separated clusters are from each other,
-
-based on the difference between the observed and expected weight of edges between nodes.
+Modularity is a ratio between the observed weights of the edges
+within a cluster versus the expected weights if the edges were randomly
+distributed between all nodes.
 
 For the whole graph, the closer to 1 the better.
 
@@ -297,7 +136,7 @@ Node similarity is measured based on these walks.
 Network example:
 
 ```{r, echo=FALSE, out.height='60%', out.width = '60%', fig.align="center"}
-knitr::include_graphics("../Images/clusGraphExample.png", auto_pdf = TRUE)
+knitr::include_graphics("Images/clusGraphExample.png", auto_pdf = TRUE)
 ```
 
 ## Louvain {.columns-2 .smaller}
@@ -353,18 +192,36 @@ knitr::include_graphics("../Images/leiden_Fig3_noLegend.png", auto_pdf = TRUE)
 
 ([Traag et al, From Louvain to Leiden: guaranteeing well-connected communities](https://www.nature.com/articles/s41598-019-41695-z))
 
+## Separatedness - silhouette width
+
+Congruence of clusters may be assessed by computing the silhouette width for 
+each cell.
+
+For each cell in the cluster calculate the the average distance to all other
+cells in the cluster and the average distance to all cells not in the cluster.
+The cells silhouette width is the difference between these divided by the
+maximum of the two values. 
+
+Cells with a large silhouette are strongly related to cells in the cluster,
+cells with a negative silhouette width are more closely related to other
+clusters.
+
+Good cluster separation is indicated by clusters whose cells have large
+silhouette values.
+
+## Separatedness - silhouette width
+
+```{r, echo=FALSE, out.width = '100%', fig.align="center"}
+knitr::include_graphics("Images/Silhouette.png")
+```
+
 ## Cluster-wise modularity to assess clusters quality 
 
-Clusters that are well separated mostly comprise intra-cluster edges and harbour a high modularity score on the diagonal and low scores off that diagonal.
+Clusters that are well separated mostly comprise intra-cluster edges and harbour
+a high modularity score on the diagonal and low scores off that diagonal.
 
 Two poorly separated clusters will share edges and the pair will have a high score.
 
-```{r, echo=FALSE, out.height='100%', out.width = '100%', fig.align="center"}
-knitr::include_graphics("../Images/clustLouvainBoth.png", auto_pdf = TRUE)
+```{r, echo=FALSE, out.width = '90%', fig.align="center"}
+knitr::include_graphics("Images/ClusterwiseModularity.png")
 ```
-
-## Recap
-
-* hierarchical and k-means methods are fast for small data sets
-
-* graph-based methods are better suited for large data sets and cluster detection
