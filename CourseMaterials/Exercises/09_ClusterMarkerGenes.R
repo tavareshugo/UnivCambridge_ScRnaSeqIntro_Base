@@ -7,212 +7,147 @@ library(tidyverse) # always load tidyverse after other packages
 
 # Read data ----
 
-# normalised within batches without batch-integration correction
-uncorrected <- readRDS("Robjects/DataIntegration_uncorrected.Rds")
-rownames(uncorrected) <- uniquifyFeatureNames(rownames(uncorrected), rowData(uncorrected)$Symbol)
-
-# data corrected using batch integration with mutual nearest neighbours
-corrected <- readRDS("Robjects/caron_postDeconv_5hCellPerSpl_dsi_PBMMC_ETV6-RUNX1_clust.Rds")
-rownames(corrected) <- uniquifyFeatureNames(rownames(corrected), rowData(corrected)$Symbol)
+# read object (continued from the previous section)
+sce <- readRDS("Robjects/Caron_clustering_material.rds")
 
 # visualise cluster assignments on the corrected data
-plotUMAP(corrected, 
-         colour_by = "louvain", 
-         text_by = "louvain")
-
-# copy cluster assignments to the uncorrected object
-# first make sure that the cell names are in the same order
-all(colnames(uncorrected) == colnames(corrected))
-colData(uncorrected)$louvain <- factor(colData(corrected)$louvain)
+plotReducedDim(sce,
+               dimred = "UMAP_corrected",
+               colour_by = "louvain15",
+               text_by = "louvain15")
 
 # visualise a previously known marker gene (for monocytes)
-plotTSNE(corrected, 
-         colour_by = "CST3", 
-         text_by = "louvain", 
-         by_exprs_values = "reconstructed")
+plotReducedDim(sce,
+               dimred = "UMAP_corrected",
+               colour_by = "CST3",
+               text_by = "louvain15",
+               by_exprs_values = "logcounts")
 
 
 # Marker gene identification ----
 
-# identify marker genes based on mean expression differences
-# default options do not need to be specified, but shown here for illustration
-markers_default <- findMarkers(
-  uncorrected, 
-  groups = factor(corrected$louvain), # clusters to compare
-  block = uncorrected$SampleGroup,    # covariates in statistical model
-  test.type = "t",   # t-test (default)
-  direction = "any", # test for either higher or lower expression (default)
-  lfc = 0, # null hypothesis log-fold-change = 0 (default)
-  pval.type = "any" # ranking of p-values based on any comparison (default)
-)
+# identify marker genes
+# by default the function uses "logcounts" as the assay (see help)
+markers <- scoreMarkers(sce,
+                        groups = sce$louvain15,
+                        block = sce$SampleName)
 
 # returns a list of length equal to the number of clusters
-markers_default
+markers
 
 # check the result of a particular cluster
-markers_default[[8]]
+markers[[8]]
 
 # extract results for one of the clusters
-c8_markers_default <- markers_default[[8]]
-c8_markers_default[1:10, c(1, 5:14)]
+c8_markers <- markers[["8"]] %>%
+  as.data.frame()
 
-# identify set of genes in the top 3 p-value ranking
-c8_markers_default[c8_markers_default$Top <= 3, ]
+# look at top-ranked genes
+c8_markers %>%
+  select(contains("cohen")) %>%
+  filter(rank.logFC.cohen <= 5) %>%
+  arrange(rank.logFC.cohen)
 
-# visualise one of the top genes using MNN-corrected values
-plotTSNE(corrected, 
-         colour_by = "LYZ", 
-         text_by = "louvain", 
-         by_exprs_values = "reconstructed")
+# visualise one of the top genes on the MNN-corrected UMAP
+plotReducedDim(sce,
+               dimred = "UMAP_corrected",
+               colour_by = "LYZ",
+               text_by = "louvain15")
 
-# visualise the expression of the gene on the uncorrected values
-plotExpression(uncorrected, 
-               features = "LYZ", 
-               x = "louvain")
-
-
-# Exercise: Test for up-regulated genes ----
-
-# HBA1 gene was one of the top genes in previous analysis
-# but it is NOT expressed in cluster 8
-plotExpression(uncorrected,
-               features = "HBA1",
-               x = "louvain")
-
-# modify the previous call to findMarkers to focus on genes that are up-regulated
-markers_up <- findMarkers(FIXME)
-
-# extract the results for cluster 8 and check that this gene is no longer on top
-c8_markers_up <- FIXME
-
-# can you find out what the rank of HBA1 is now?
+# visualise the logcounts distribution for this gene
+plotExpression(sce,
+               features = "LYZ",
+               x = "louvain15")
 
 
+# Exercise ----
 
-# Considering log-fold change threshold ----
+# visualise CD3D (T cell marker)
+plotReducedDim(sce,
+               dimred = "UMAP_corrected",
+               colour_by = "CD3D",
+               text_by = "louvain15")
 
-# These two genes were significant in previous analysis
-# but TSPO has less impressive difference compared to LYZ
-plotExpression(uncorrected, 
-               features = c("TSPO", "LYZ"), 
-               x = "louvain")
+plotExpression(sce,
+               features = "CD3D",
+               x = "louvain15")
 
-# testing for the alternative hypothesis that LFC > 1
-markers_up_lfc1 <- findMarkers(
-  uncorrected, 
-  groups = factor(corrected$louvain), # clusters to compare
-  block = uncorrected$SampleGroup,    # covariates in statistical model
-  test.type = "t",   # t-test (default)
-  direction = "up", # test for up-regulated genes only
-  lfc = 1, # null hypothesis log-fold-change = 1
-  pval.type = "any" # ranking of p-values based on any comparison (default)
-)
+# extract results from cluster 4 and convert to data.frame
+c4_markers <- FIXME
 
-# fetching top markers for cluster 8
-c8_markers_up_lfc1 <- markers_up_lfc1[[8]]
-c8_markers_up_lfc1[c8_markers_up_lfc1$Top <= 3, ]
+# filter the data.frame using your choice of ranking statistic
+# `rank.logFC.detected` or `rank.logFC.cohen`
+# or a combination of both!
+c4_markers %>%
+  filter(FIXME)
 
-
-# Considering p-value summary ----
-
-# This gene is more highly expressed in cluster 8 but only compared to some clusters
-plotExpression(uncorrected, 
-               features = c("TMSB10"), 
-               x = "louvain")
-
-# ranking based on the maximum p-value across all pairwise comparisons
-markers_up_all <- findMarkers(
-  uncorrected, 
-  groups = factor(corrected$louvain), # clusters to compare
-  block = uncorrected$SampleGroup,    # covariates in statistical model
-  test.type = "t",   # t-test (default)
-  direction = "up", # test for up-regulated genes only
-  lfc = 0, # null hypothesis log-fold-change = 1
-  pval.type = "all" # ranking of p-values based on all comparisons
-)
-
-# fetching top markers for cluster 8
-c8_markers_up_all <- markers_up_all[[8]]
-c8_markers_up_all[1:10, ]
+# visualise the expression of genes that seem interesting from your filters
+plotExpression(sce,
+               features = FIXME,
+               x = "louvain15")
 
 
 # Heatmaps ----
 
 # select some top genes for cluster 8
-c8_top10 <- c8_markers_up_lfc1[c8_markers_up_lfc1$Top <= 10, ]
+c8_top10 <- c8_markers %>%
+  filter(rank.logFC.cohen <= 10)
 
-# heatmap of expression values
-plotHeatmap(uncorrected, 
+# heatmap of expression for each cell
+plotHeatmap(sce,
             features = rownames(c8_top10),
-            order_columns_by = c("louvain", "SampleGroup"))
+            order_columns_by = c("louvain15", "SampleGroup"))
 
-# heatmap of log-fold-changes
-pheatmap(c8_top10[, 5:14], 
-         breaks=seq(-5, 5, length.out=101))
+# heatmap of expression with average per cluster
+plotGroupedHeatmap(sce,
+                   features = rownames(c8_top10),
+                   group = "louvain15",
+                   block = "SampleGroup")
 
+# heatmap of Z-scores for each cell
+plotHeatmap(sce,
+            features = rownames(c8_top10),
+            order_columns_by = c("louvain15", "SampleGroup"),
+            scale = TRUE, zlim = c(-3, 3))
 
-# Alternative testing strategies ----
-
-# Wilcoxon rank-sum test
-markers_wilcox_up <- findMarkers(
-  uncorrected, 
-  groups = uncorrected$louvain, # clusters to compare
-  block = uncorrected$SampleGroup,    # covariates in statistical model
-  test.type = "wilcox",   # t-test (default)
-  direction = "up"
-)
-
-c8_markers_wilcox_up <- markers_wilcox_up[[8]]
-head(c8_markers_wilcox_up)
-
-# make a heatmap of AUC values
-# we use a custom colour palette that diverges around 0.5
-# we optionally do not cluster rows to keep genes in their ranking order
-pheatmap(c8_markers_wilcox_up[c8_markers_wilcox_up$Top <= 6, 5:14],
-         breaks = seq(0, 1, length.out = 21),
-         color = viridis::cividis(21), 
-         cluster_rows = FALSE)
-
-# Binomial test of proportions
-markers_binom_up <- findMarkers(
-  uncorrected, 
-  groups = uncorrected$louvain, # clusters to compare
-  block = uncorrected$SampleGroup,    # covariates in statistical model
-  test.type = "binom",   # t-test (default)
-  direction = "up"
-)
-
-# make a heatmap of expression values for top genes in cluster 8
-c8_markers_binom_up <- markers_binom_up[[8]]
-plotExpression(uncorrected, 
-               x = "louvain",
-               features = rownames(c8_markers_binom_up)[1:4])
+# heatmap of Z-scores averaged per cluster
+plotGroupedHeatmap(sce,
+                   features = rownames(c8_top10),
+                   group = "louvain15",
+                   block = "SampleGroup",
+                   scale = TRUE, zlim = c(-3, 3))
 
 
-# Combining multiple tests ----
+# LFC threshold ----
 
-markers_combined <- multiMarkerStats(
-  t = findMarkers(
-    uncorrected,
-    groups = uncorrected$louvain,
-    direction = "up",
-    block = uncorrected$SampleGroup
-  ),
-  wilcox = findMarkers(
-    uncorrected,
-    groups = uncorrected$louvain,
-    test = "wilcox",
-    direction = "up",
-    block = uncorrected$SampleGroup
-  ),
-  binom = findMarkers(
-    uncorrected,
-    groups = uncorrected$louvain,
-    test = "binom",
-    direction = "up",
-    block = uncorrected$SampleGroup
-  )
-)
+# genes with rank 1 in cluster 8
+c8_markers %>%
+  filter(rank.logFC.cohen == 1) %>%
+  select(contains("cohen"))
 
-# the first few rows and columns of the combined results table
-markers_combined[[8]][1:10 , 1:9]
+# plot expression of FCGR3A
+plotExpression(sce,
+               features = "FCGR3A",
+               x = "louvain15")
+
+# run gene marker analysis using a stricter LFC threshold
+markers_lfc <- scoreMarkers(sce,
+                            groups = sce$louvain15,
+                            block = sce$SampleName,
+                            lfc = 2)
+
+# extract the results for cluster 8
+c8_markers_lfc <- markers_lfc[["8"]] %>% as.data.frame()
+
+# check top 5 ranked genes
+c8_markers_lfc %>%
+  select(contains("cohen")) %>%
+  filter(rank.logFC.cohen <= 5)
+
+# check new rank for FCGR3A
+c8_markers_lfc["FCGR3A", c("rank.logFC.cohen")]
+
+# we could have also used other ranks to eliminate this gene in the original analysis
+c8_markers %>%
+  filter(rank.logFC.cohen == 1) %>%
+  select(contains("rank"))
