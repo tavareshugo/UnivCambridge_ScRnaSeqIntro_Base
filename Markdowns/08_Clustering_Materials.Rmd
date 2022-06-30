@@ -4,7 +4,7 @@ author: "Ashley Sawle, Stephane Ballereau"
 date: "May 2022"
 subtitle: Clustering
 output:
-  html_notebook:
+  html_document:
     df_print: paged
     toc: yes
     number_sections: true
@@ -465,15 +465,26 @@ We can view the results in as a beeswarm plot. We colour each cell according to
 either its current cluster or, if the cell has a negative silhouette width, the
 cluster that it is closest to.
 
-```{r}
+```{r fig.width=14, fig.height=6}
 plotSilBeeswarm <- function(silDat){
-  silDat %>% 
+  silTab <- silDat %>% 
     as.data.frame() %>% 
-    mutate(closestCluster = ifelse(width > 0, cluster, other) %>% factor()) %>% 
+    mutate(closestCluster = ifelse(width > 0, cluster, other) %>% factor())
+  
+  plt <- silTab %>% 
       ggplot(aes(x=cluster, y=width, colour=closestCluster)) +
-        ggbeeswarm::geom_quasirandom(method="smiley")
+        ggbeeswarm::geom_quasirandom(method="smiley", alpha=0.6) +
+        theme_bw()
+  
+  plt <- scater:::.resolve_plot_colours(plt, silTab$closestCluster, "closestCluster")
 }
-plotSilBeeswarm(sil.approx)
+
+p1 <- plotSilBeeswarm(sil.approx)
+p2 <- plotReducedDim(sce, 
+                     dimred = "TSNE_corrected", 
+                     colour_by="leiden20", 
+                     text_by = "leiden20")
+p1 + p2
 ```
 
 We could also look at the correspondence between different clusters by plotting
@@ -508,20 +519,29 @@ plotSilGrid <- function(silDat){
 plotSilGrid(sil.approx)
 ```
 From these two plots we can see that clusters 5 and 6 appear to have a good
-degree of separation. In contrast, clusters 1 and 3 have a large number of
-cells that appear to be closer to cluster 2. It is possible clusters 1-3 contain
-a degree of heterogeneity that suggests further splitting of these clusters may
-be required.
+degree of separation, however, cluster 6 only contains 1 cell, whilst there are
+49 cells in other clusters that appear closer to it than they are to their
+assigned cluster. Perhaps cluster 6 needs to be merged with cluster 2. In
+contrast, clusters 1 and 2 have a large number of cells that appear to be closer
+to cluster 3. It is possible clusters 1-3 contain a degree of heterogeneity that
+suggests further splitting of these clusters may be required.
 
 Let's do the same plots with the walktrap clusters generated with *k*=15.
 
-```{r}
+```{r, fig.width=18, fig.height=6}
 sil.approx <- approxSilhouette(reducedDim(sce, "corrected"),
                                clusters=sce$walktrap15)
 
-plotSilBeeswarm(sil.approx)
+wp1 <- plotSilBeeswarm(sil.approx)
 
-plotSilGrid(sil.approx)
+wp2 <- plotReducedDim(sce, 
+                     dimred = "TSNE_corrected", 
+                     colour_by="walktrap15", 
+                     text_by = "walktrap15")
+
+wp3 <- plotSilGrid(sil.approx)
+
+wp1 + wp2 + wp3
 ```
 
 This clustering appears to have generated a set of clusters with better
@@ -529,12 +549,20 @@ separatedness than the Leiden method with a *k* of 20.
 
 And again with the louvain clusters
 
-```{r}
-sil.approx <- approxSilhouette(reducedDim(sce, "corrected"), clusters=sce$louvain15)
+```{r, fig.width=18, fig.height=6}
+sil.approx <- approxSilhouette(reducedDim(sce, "corrected"),
+                               clusters=sce$louvain15)
 
-plotSilBeeswarm(sil.approx)
+lp1 <- plotSilBeeswarm(sil.approx)
 
-plotSilGrid(sil.approx)
+lp2 <- plotReducedDim(sce, 
+                     dimred = "TSNE_corrected", 
+                     colour_by="louvain15", 
+                     text_by = "louvain15")
+
+lp3 <- plotSilGrid(sil.approx)
+
+lp1 + lp2 + lp3
 ```
 There seems to be a greater degree of overlap between these clusters,
 perhaps more resolution would improve this clustering - we might 
@@ -562,9 +590,20 @@ walktrap15 <- clusterCells(sce,
                            full = TRUE)
 g <- walktrap15$objects$graph
 ratio <- pairwiseModularity(g, walktrap15$clusters, as.ratio=TRUE)
-pheatmap(log2(ratio+1), cluster_rows=FALSE, cluster_cols=FALSE,
-    color=colorRampPalette(c("white", "blue"))(100))
+
+hm1 <- pheatmap(log2(ratio+1),
+         cluster_rows=FALSE, 
+         cluster_cols=FALSE,
+         color=colorRampPalette(c("white", "blue"))(100))
 ```
+
+We can compare this to the silhuoette width grid
+
+```{r, fig.width=12, fig.height=6}
+wp4 <- ggplotify::as.ggplot(hm1)
+wp2 + wp3 + wp4
+```
+
 
 Largely, this reflects what we saw from the silhouette widths, but also reveals
 some additional inter-connectedness between other clusters e.g. cluster 3 and

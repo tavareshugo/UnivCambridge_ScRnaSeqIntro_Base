@@ -24,38 +24,40 @@ table(clustering1$clusters)
 
 #-------------------------------------------------------------------------------
 
-# Plotting the Nearest Neighbour network
-## extract the graph
+# extract the graph
 snn.gr <- clustering1$objects$graph
 
-## Add Sample group to vertices (nodes, ie cells)
+# Add Sample group to vertices (nodes, ie cells)
 V(snn.gr)$SampleGroup <- as.character(colData(sce)$SampleGroup)
 
-## pick 1000 nodes randomly
+# pick 1000 nodes randomly
 set.seed(1423)
 selectedNodes <- sample(3500, 1000)
+
+# subset graph for these 1000 randomly chosen nodes
 snn.gr.subset <- subgraph(snn.gr, selectedNodes)
 
-## set colors for clusters
+# set colors for clusters
 grps <-  V(snn.gr.subset)$SampleGroup
 cols <- c("dodgerblue", "lightyellow")[as.numeric(factor(grps))]
 names(cols) <- grps
 
-## plot graph
+# plot graph
 plot.igraph(snn.gr.subset,
-  layout = layout_with_fr(snn.gr.subset),
-  vertex.size = 3, 
-  vertex.label = NA,
-  vertex.color = cols,
-  frame.color = cols,
-  main = "default parameters"
+            layout = layout_with_fr(snn.gr.subset),
+            vertex.size = 3, 
+            vertex.label = NA,
+            vertex.color = cols,
+            frame.color = cols,
+            main = "default parameters"
 )
+
+# add legend
 legend('bottomright',
        legend=unique(names(cols)),
        pch=21,
        pt.bg=unique(cols),
        pt.cex=1, cex=.6, bty="n", ncol=1)
-
 #-------------------------------------------------------------------------------
 
 # Visualise the clusters on a tSNE plot
@@ -85,7 +87,7 @@ plotReducedDim(sce,
                colour_by="walktrap15", 
                text_by = "walktrap15",
                other_fields = list("SampleGroup")) +
-  facet_wrap("SampleGroup")
+  facet_wrap(vars(SampleGroup))
 
 #-------------------------------------------------------------------------------
 
@@ -109,7 +111,7 @@ plotReducedDim(sce,
 
 # The Leiden method
 
-# Exercise 1
+## EXERCISE 1 ##
 
 #-------------------------------------------------------------------------------
 
@@ -117,21 +119,32 @@ plotReducedDim(sce,
 
 ## Silhouette width
 
-sil.approx <- approxSilhouette(reducedDim(sce, "corrected"),
+sil.approx <- approxSilhouette(reducedDim(sce, "corrected"), 
                                clusters=sce$leiden20)
 sil.approx
 
 ### Visualise the results in as a beeswarm plot
 
 plotSilBeeswarm <- function(silDat){
-  silDat %>% 
+  silTab <- silDat %>% 
     as.data.frame() %>% 
-    mutate(closestCluster = ifelse(width > 0, cluster, other) %>% factor()) %>% 
+    mutate(closestCluster = ifelse(width > 0, cluster, other) %>% factor())
+  
+  plt <- silTab %>% 
       ggplot(aes(x=cluster, y=width, colour=closestCluster)) +
-        ggbeeswarm::geom_quasirandom(method="smiley")
+        ggbeeswarm::geom_quasirandom(method="smiley", alpha=0.6) +
+        theme_bw()
+  
+  plt <- scater:::.resolve_plot_colours(plt, silTab$closestCluster, "closestCluster")
 }
 
-plotSilBeeswarm(sil.approx)
+p1 <- plotSilBeeswarm(sil.approx)
+p2 <- plotReducedDim(sce, 
+                     dimred = "TSNE_corrected", 
+                     colour_by="leiden20", 
+                     text_by = "leiden20")
+p1 + p2
+
 
 ### Visualise results on a grid 
 
@@ -164,17 +177,34 @@ plotSilGrid(sil.approx)
 sil.approx <- approxSilhouette(reducedDim(sce, "corrected"),
                                clusters=sce$walktrap15)
 
-plotSilBeeswarm(sil.approx)
+wp1 <- plotSilBeeswarm(sil.approx)
 
-plotSilGrid(sil.approx)
+wp2 <- plotReducedDim(sce, 
+                     dimred = "TSNE_corrected", 
+                     colour_by="walktrap15", 
+                     text_by = "walktrap15")
+
+wp3 <- plotSilGrid(sil.approx)
+
+wp1 + wp2 + wp3
 
 ## Again with Louvain + k = 15
 
-sil.approx <- approxSilhouette(reducedDim(sce, "corrected"), clusters=sce$louvain15)
+sil.approx <- approxSilhouette(reducedDim(sce, "corrected"),
+                               clusters=sce$louvain15)
 
-plotSilBeeswarm(sil.approx)
+lp1 <- plotSilBeeswarm(sil.approx)
 
-plotSilGrid(sil.approx)
+lp2 <- plotReducedDim(sce, 
+                     dimred = "TSNE_corrected", 
+                     colour_by="louvain15", 
+                     text_by = "louvain15")
+
+lp3 <- plotSilGrid(sil.approx)
+
+lp1 + lp2 + lp3
+
+#-------------------------------------------------------------------------------
 
 ##  Modularity to assess clusters quality
 
@@ -188,8 +218,16 @@ ratio <- pairwiseModularity(g, walktrap15$clusters, as.ratio=TRUE)
 
 ### Visualise modularity on heatmap
 
-pheatmap(log2(ratio+1), cluster_rows=FALSE, cluster_cols=FALSE,
-    color=colorRampPalette(c("white", "blue"))(100))
+hm1 <- pheatmap(log2(ratio+1), 
+                cluster_rows=FALSE, 
+                cluster_cols=FALSE,
+                color=colorRampPalette(c("white", "blue"))(100))
+
+### Compare to the equivalent plot based on silhouette widths
+
+wp4 <- ggplotify::as.ggplot(hm1)
+
+wp2 + wp3 + wp4
 
 ### Visualise as a network graph
 
@@ -202,13 +240,15 @@ plot(cluster.gr,
      edge.width=igraph::E(cluster.gr)$weight*5,
      layout=igraph::layout_with_lgl)
 
-
 ## Comparing two sets of clusters
 
 jacc.mat <- linkClustersMatrix(sce$louvain15, sce$walktrap15)
 rownames(jacc.mat) <- paste("Louvain", rownames(jacc.mat))
 colnames(jacc.mat) <- paste("Walktrap", colnames(jacc.mat))
-pheatmap(jacc.mat, color=viridis::viridis(100), cluster_cols=FALSE, cluster_rows=FALSE)
+pheatmap(jacc.mat, 
+         color=viridis::viridis(100), 
+         cluster_cols=FALSE, 
+         cluster_rows=FALSE)
 
 #-------------------------------------------------------------------------------
 
@@ -223,7 +263,6 @@ out <- clusterSweep(reducedDim(sce, "corrected"),
 
 out$clusters[,1:4]
 out$parameters
-
 
 ## Assess all clusters using number of clusters and mean silhouette width
 
@@ -257,9 +296,17 @@ rownames(jacc.mat) <- paste("Walktrap_10", rownames(jacc.mat))
 colnames(jacc.mat) <- paste("Walktrap_15", colnames(jacc.mat))
 pheatmap(jacc.mat, color=viridis::viridis(100), cluster_cols=FALSE, cluster_rows=FALSE)
 
+
+jacc.mat <- linkClustersMatrix(out$clusters$k.20_cluster.fun.walktrap, 
+                               out$clusters$k.25_cluster.fun.walktrap)
+rownames(jacc.mat) <- paste("Walktrap_20", rownames(jacc.mat))
+colnames(jacc.mat) <- paste("Walktrap_25", colnames(jacc.mat))
+pheatmap(jacc.mat, color=viridis::viridis(100), cluster_cols=FALSE, cluster_rows=FALSE)
+
 #-------------------------------------------------------------------------------
 
-# Exercise 2
+## EXERCISE 2 ##
+
 
 #-------------------------------------------------------------------------------
 
