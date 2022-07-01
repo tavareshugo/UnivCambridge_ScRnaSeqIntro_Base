@@ -82,6 +82,12 @@ plot.igraph(
 
 ## Graph-based clustering
 
+```{r, echo=FALSE,out.width = '40%', fig.align="center"}
+knitr::include_graphics("../Images/KNNvSNN.svg", auto_pdf = TRUE)
+```
+
+## Graph-based clustering
+
 Example with different numbers of neighbours:
 
 ```{r, echo=FALSE, out.height='100%', out.width = '100%', fig.align="center"}
