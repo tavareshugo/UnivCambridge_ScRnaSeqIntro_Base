@@ -24,7 +24,7 @@
         usePrettify: true,
         enableSlideAreas: true,
         enableTouch: true,
-                        favIcon: '../Images/uniOfCamCrukLogos.png',
+                        favIcon: 'Images/uniOfCamCrukLogos.png',
               },
 
       // Author information
@@ -3099,6 +3099,10 @@ if (document.readyState !== "loading" &&
       display: list-item;
     }
 
+    details > summary > p:only-child {
+      display: inline;
+    }
+
     slides > slide {
       -webkit-transition: all 0.4s ease-in-out;
       -moz-transition: all 0.4s ease-in-out;
@@ -3195,7 +3199,7 @@ slide:not(.current) .plotly.html-widget{
       position: absolute;
       bottom: 20px;
       left: 60px;
-      background: url(../Images/uniOfCamCrukLogos.png) no-repeat 0 50%;
+      background: url(Images/uniOfCamCrukLogos.png) no-repeat 0 50%;
       -webkit-background-size: 30px 30px;
       -moz-background-size: 30px 30px;
       -o-background-size: 30px 30px;
