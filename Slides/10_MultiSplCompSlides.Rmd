@@ -4,18 +4,11 @@ author: "Abbi Edwards"
 date: "Bitesize - May 2022"
 output:
   ioslides_presentation:
-    logo: ../Images/CRUK_Cambridge_Institute.png
-    smaller: yes
-    widescreen: yes
+    widescreen: true
+    smaller: true
+    logo: Images/uniOfCamCrukLogos.png
     css: css/stylesheet.css
-  beamer_presentation: default
 ---
-
-```{r include=FALSE}
-library(tidyr)
-library(dplyr)
-
-```
 
 ## Outline
 
