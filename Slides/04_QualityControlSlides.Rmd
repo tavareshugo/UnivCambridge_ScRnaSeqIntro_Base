@@ -7,8 +7,8 @@ output:
   ioslides_presentation:
     widescreen: true
     smaller: true
-    logo: Images/crukcc-transparent-small.png
-    css: ../css/stylesheet.css
+    logo: Images/uniOfCamCrukLogos.png
+    css: css/stylesheet.css
 ---
 
 <style type="text/css">
@@ -17,21 +17,11 @@ slides > slide:not(.nobackground):after {
 }
 </style>
 
-```{r include=FALSE}
-library(DropletUtils)
-library(scater)
-library(tidyverse)
-library(patchwork)
-options(max.print = 2000)
-```
-
-
 ## Single Cell RNAseq Analysis Workflow
 
 ```{r echo=FALSE, out.width='60%', fig.align='center'}
 knitr::include_graphics('Images/workflow2_QC.png')
 ```
-
 
 ## 10x overview
 
@@ -42,7 +32,6 @@ knitr::include_graphics('Images/workflow2_QC.png')
 <div style="width: 100%; float: bottom; padding-top: 20%">
 Image source: https://web.genewiz.com/single-cell-faq
 </div>
-
 
 ## Not every droplet is useble
 
@@ -68,8 +57,6 @@ knitr::include_graphics('Images/droplet_overview.png')
     * Number of UMIs/transcripts detected per cell
     
 </div>
-
-
 
 ## Quality Control
 
@@ -114,8 +101,6 @@ http://bioconductor.org/books/release/OSCA/
 <img src="Images/sce_object_1.png" class="centerimg" style="width: 95%">
 </div>
 
-
-
 ## Single Cell Experiment Vocabulary alert
 
 * cell = Barcode = droplet
@@ -137,8 +122,6 @@ knitr::include_graphics('Images/sce_object_2.png')
  To access counts from sce object: __counts(sce)__
 </div>
 
-
-
 ## Feature metadata
 
 <div style="width: 75%; float: top; padding-left: 10%; padding-top: 10%">
@@ -149,10 +132,6 @@ knitr::include_graphics('Images/sce_object_2.png')
  To access gene metadata from sce object: __rowData(sce)__
 </div>
 
-
-
-
-
 ## Droplet annotation (Cell metadata)
 
 <div style="width: 75%; float: top; padding-left: 10%; padding-top: 10%">
@@ -162,9 +141,6 @@ knitr::include_graphics('Images/sce_object_2.png')
 <div style="width: 80%; float: left;">
  To access cell metadata from sce object: __colData(sce)__
 </div>
-
-
-
 
 ## Properties of RNAseq data - Total UMIs 
 
@@ -184,14 +160,11 @@ knitr::include_graphics('Images/top_expressed_genes.png')
 knitr::include_graphics('Images/QC_UMI_Counts_Distrubution.jpg')
 ```
 
-
-
 ## Properties of RNAseq data - Distribution of genes per cell 
 
 ```{r echo=FALSE, out.width='100%', fig.align='center', out.height='100%'}
 knitr::include_graphics('Images/QC_Genes_per_Cell_Distribution.jpg')
 ```
-
 
 ## Properties of RNAseq data - Distribution of mitochondrial genes
 
