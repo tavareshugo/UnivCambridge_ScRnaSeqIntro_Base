@@ -4,12 +4,10 @@ author: "Stephane Ballereau"
 date: "Feb 2022"
 output:
   ioslides_presentation:
-    logo: ../Images/uniOfCamCrukLogos.png
-    smaller: yes
-    widescreen: yes
+    widescreen: true
+    smaller: true
+    logo: Images/uniOfCamCrukLogos.png
     css: css/stylesheet.css
-  slidy_presentation: default
-  beamer_presentation: default
 ---
     
 ## Data sets
@@ -48,16 +46,15 @@ As the study aims at identifying cell populations, large numbers of cells were s
 
 We will follow several steps:
 
-* sequencing quality check
-* alignment of reads to the human genome (GRCh38) with 10x software cellranger
-* quality control (cell calls, cells and genes filtering)
+* Sequencing quality check
+* Alignment of reads to the human genome with 10x software cellranger
+* Quality control (filter poor quality cells and remove uninformative genes)
 * UMI count normalisation
-* feature selection and dimensionality reduction
-* data set integration (PBMMC and ETV6-RUNX1)
-* clustering
-* identification of cluster marker genes
-* differential expression and abundance between conditions
-* (trajectory analysis)
+* Feature selection and dimensionality reduction
+* Data set integration
+* Clustering
+* Identification of cluster marker genes
+* Differential expression and abundance between conditions
 
 ## Workflow
 
