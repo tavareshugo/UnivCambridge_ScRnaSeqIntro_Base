@@ -4,11 +4,10 @@ author: "Abbi Edwards"
 date: "24th Jun 2022"
 output:
   ioslides_presentation:
+    widescreen: true
+    smaller: true
+    logo: Images/uniOfCamCrukLogos.png
     css: css/stylesheet.css
-    logo: ../Images/uniOfCamCrukLogos.png
-    smaller: yes
-    widescreen: yes
-  beamer_presentation: default
 ---
 
 ## Workflow
