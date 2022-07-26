@@ -9,6 +9,8 @@
 
 set -ex
 
+cd  data
+
 # activate conda environment
 source activate sra
 
@@ -16,9 +18,9 @@ source activate sra
 ID=`head -n $SLURM_ARRAY_TASK_ID SraRunTable.txt | tail -n 1 | cut -d "," -f 1`
 
 # create data folders
-sraDir=data/sra
+sraDir=sra
 mkdir -p ${sraDir}
-fqDir=data/fastq
+fqDir=fastq
 mkdir -p ${fqDir}
 
 # download file
@@ -31,6 +33,6 @@ fastq-dump -O ${fqDir} --gzip --split-files ${sraDir}/${ID}/${ID}.sra
 # 1 = I1
 # 2 = R1
 # 3 = R2
-mv ${fqDir}/${ID}_1.fastq.gz ${fqDir}/${ID}_S1_L001_I1_001.fast.gz
-mv ${fqDir}/${ID}_2.fastq.gz ${fqDir}/${ID}_S1_L001_R1_001.fast.gz
-mv ${fqDir}/${ID}_3.fastq.gz ${fqDir}/${ID}_S1_L001_R2_001.fast.gz
+mv ${fqDir}/${ID}_1.fastq.gz ${fqDir}/${ID}_S1_L001_I1_001.fastq.gz
+mv ${fqDir}/${ID}_2.fastq.gz ${fqDir}/${ID}_S1_L001_R1_001.fastq.gz
+mv ${fqDir}/${ID}_3.fastq.gz ${fqDir}/${ID}_S1_L001_R2_001.fastq.gz
