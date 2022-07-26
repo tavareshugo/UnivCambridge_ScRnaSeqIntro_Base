@@ -1,45 +1,39 @@
 #!/bin/bash
-#SBATCH -A LEYSER-SL2-CPU
-#SBATCH -D /rds/user/hm533/hpc-work/scRNA-seq_course/make_data
 #SBATCH -J mkref
-#SBATCH -o logs/01-prepare_reference.log
+#SBATCH -o 01-prepare_reference.%j.log
+#SBATCH -e 01-prepare_reference.%j.err
 #SBATCH -c 8
 #SBATCH -t 12:00:00
 #SBATCH -p cclake
 #SBATCH --mem-per-cpu=3420MB
 
-mkdir -p data/reference/
-cd data/reference/
+set -exu
 
+refDir=data/reference
+mkdir -p ${refDir}
 
 #### Download reference genome ####
 
-# download two chromosomes only (to reduce size of the data)
-wget --no-check-certificate -O chr21.fa.gz https://ftp.ensembl.org/pub/release-104/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.21.fa.gz
-wget --no-check-certificate -O chr22.fa.gz https://ftp.ensembl.org/pub/release-104/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.22.fa.gz
-
-# concatenate
-cat chr21.fa.gz chr22.fa.gz > genome.fa.gz 
-rm chr21.fa.gz chr22.fa.gz 
-
-# unzip
-gunzip genome.fa.gz
-
+# download only chromosome 21 (to reduce size of the data)
+ensURL=https://ftp.ensembl.org/pub/release-104
+URL=${ensURL}/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.chromosome.21.fa.gz
+wget --no-check-certificate -P ${refDir} ${URL}
+gunzip ${refDir}/Homo_sapiens.GRCh38.dna.chromosome.21.fa.gz
 
 #### Download and prepare gene annotation ####
 
 # download from ENSEMBL
-wget --no-check-certificate -O annotation.gtf.gz https://ftp.ensembl.org/pub/release-104/gtf/homo_sapiens/Homo_sapiens.GRCh38.104.chr.gtf.gz
+URL=${ensURL}/gtf/homo_sapiens/Homo_sapiens.GRCh38.104.chr.gtf.gz
+wget --no-check-certificate -P ${refDir} ${URL}
+gunzip ${refDir}/Homo_sapiens.GRCh38.104.chr.gtf.gz
 
-# decompress (for cellranger)
-gunzip annotation.gtf.gz
-
-grep -E "^21|^#" reference/Homo_sapiens.GRCh38.104.chr.gtf > ../CourseMaterials/Data/reference/Homo_sapiens.GRCh38.104.chr21.gtf
+grep -E "^21|^#" ${refDir}/Homo_sapiens.GRCh38.104.chr.gtf \
+  > ${refDir}/Homo_sapiens.GRCh38.104.chr21.gtf
 
 #### cellranger indexing ####
 
 cellranger mkref \
   --nthreads="${SLURM_CPUS_PER_TASK}" \
   --genome=cellranger_index \
-  --fasta=genome.fa \
-  --genes=annotation.gtf
+  --fasta=${refDir}/Homo_sapiens.GRCh38.dna.chromosome.21.fa \
+  --genes=Homo_sapiens.GRCh38.104.chr21.gtf
