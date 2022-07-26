@@ -24,7 +24,10 @@ mkdir data
 
 The SRA a metadata table was downloaded from the SRA URL above SRA Run
 Selector page (URL above).
---> *SraRunTable.txt*
+--> *data/SraRunTable.txt*
+
+NOTE: copy of SraRunTable.txt kept in Git repo for reference, but the scripts
+require it in **data**
 
 ## b) Install SRA tools in a conda environment
 
@@ -60,29 +63,7 @@ sbatch 00-download_SRA.sh
 --> data/fastq/SRR92643*_S1_L001_R1_001.fast.gz (12 files)
 --> data/fastq/SRR92643*_S1_L001_R2_001.fast.gz (12 files)
 
-# 2) CellRanger reference
-
-## a) Full genome reference
-
-We will use the most current reference provided by 10X.
-
-```
-mkdir data/references
-wget https://cf.10xgenomics.com/supp/cell-exp/refdata-gex-GRCh38-2020-A.tar.gz
-tar -C data/references -xzvf refdata-gex-GRCh38-2020-A.tar.gz
-rm -f refdata-gex-GRCh38-2020-A.tar.gz
-```
---> data/references/refdata-gex-GRCh38-2020-A
-
-## b) Chr21 reference
-
-The Cell Ranger practical requires a reference that only includes chromosome 21.
-
-```
-sbatch 01-prepare_chr21_reference.sh
-```
-
-# 3) Install Cell Ranger
+# 2) Install Cell Ranger
 
 NOTE: the URL needs to be updated from the 10X website:
 
@@ -96,3 +77,56 @@ tar -C data/software -xzvf cellranger-7.0.0.tar.gz
 rm -f cellranger-7.0.0.tar.gz
 ```
 --> **data/software/cellranger-7.0.0**
+
+
+# 3) Get CellRanger reference
+
+## a) Full genome reference
+
+We will use the most current reference provided by 10X.
+
+```
+mkdir data/references
+wget https://cf.10xgenomics.com/supp/cell-exp/refdata-gex-GRCh38-2020-A.tar.gz
+tar -C data/references -xzvf refdata-gex-GRCh38-2020-A.tar.gz
+rm -f refdata-gex-GRCh38-2020-A.tar.gz
+```
+--> data/references/refdata-gex-GRCh38-2020-A
+
+# 4) Run Cell Ranger count
+
+```
+sbatch 02-cellranger.sh
+```
+
+# 5) Run Cell Ranger count - exercise 
+
+For the Cell Ranger exercise we need to run SRR9264343 against the chr21 reference.
+We also need to subsample the fastq to 1 million reads
+
+## a) Chr21 reference
+
+```
+sbatch 01-prepare_chr21_reference.sh
+```
+--> *data/references/Homo_sapiens.GRCh38.104.chr21.gtf*
+--> *data/references/Homo_sapiens.GRCh38.104.chr.gtf*
+--> *data/references/Homo_sapiens.GRCh38.dna.chromosome.21.fa*
+--> **data/references/cellranger_index**
+
+## b) Subsample fastq
+
+```
+sbatch 03-subsample_fastq.sh
+```
+--> data/fastq_subsample/SRR9264343_S1_L001_I1_001.fastq.gz
+--> data/fastq_subsample/SRR9264343_S1_L001_R1_001.fastq.gz
+--> data/fastq_subsample/SRR9264343_S1_L001_R2_001.fastq.gz
+
+## c) Run Cell Ranger count
+
+```
+sbatch 03-cellranger_exercise.sh
+```
+
+
