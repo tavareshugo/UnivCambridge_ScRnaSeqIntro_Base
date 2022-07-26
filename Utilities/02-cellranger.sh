@@ -1,36 +1,41 @@
 #!/bin/bash
-#SBATCH -A LEYSER-SL2-CPU
-#SBATCH -D /rds/user/hm533/hpc-work/scRNA-seq_course/make_data
-#SBATCH -J public_data
-#SBATCH -o logs/02-cellranger_%a.log
-#SBATCH -c 48
-#SBATCH -t 36:00:00
-#SBATCH -p icelake
-#SBATCH --mem-per-cpu=3380
-#SBATCH -a 2-3 # rows in the CSV file with SRA information
+#SBATCH -J CellRanger_count 
+#SBATCH -o cellranger_count.%j_%a.log
+#SBATCH -a 2-13 
+#SBATCH --nodes=1
+#SBATCH --mincpus 16 
+#SBATCH --mem=64G
+#SBATCH --time=2-03:22:42
+
+set -ex
 
 echo "Start: $(date)"
 
-# get sample information from the table
-INFO=$(head -n "$SLURM_ARRAY_TASK_ID" sample_info.csv | tail -n 1)
+cd data
 
-# split relevant parts
-SAMPLE=$(echo $INFO | cut -d "," -f 2)
-TYPE=$(echo $INFO | cut -d "," -f 3)
+# Cell Ranger software
+crDir=`readlink -f software/cellranger-7.0.0`
+export PATH=${crDir}:${PATH}
+
+# get sample information from the table
+ID=`head -n $SLURM_ARRAY_TASK_ID SraRunTable.txt | tail -n 1 | cut -d "," -f 1`
 
 # reference genome
-REF="data/reference/cellranger_index"
+REF="references/refdata-gex-GRCh38-2020-A"
 
 # run cellranger count pipeline
 cellranger count \
-  --id="${SAMPLE}" \
-  --transcriptome="${REF}" \
-  --fastqs="data/reads/${SAMPLE}/" \
-  --localcores="${SLURM_CPUS_PER_TASK}" \
-  --mempercore="${SLURM_MEM_PER_CPU}"
+  --id=${ID} \
+  --sample=${ID} \
+  --transcriptome=${REF} \
+  --fastqs=fastq \
+	--localcores=16 \
+	--localmem=64
 
 # move to output directory
-mkdir -p results/cellranger/
-mv "${SAMPLE}" results/cellranger/
+mkdir -p data/cellranger/
+mv ${ID} data/cellranger/
+
+rm -f __*.mro
 
 echo "End: $(date)"
