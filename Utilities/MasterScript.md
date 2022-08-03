@@ -45,18 +45,13 @@ conda deactivate
 
 ## c) Download data
 
-### a) Retrieve meta data
-
-The script `00-download_SRA.sh` has been written to run on a cluster using the
+The script `01-download_SRA.sh` has been written to run on a cluster using the
 SLURM scheduler. It uses a batch array to determine with SRA file to download.
 As well as downloading the sra files and extracting the fastq files, it will 
 also rename the fastq to the convention expected by CellRanger.
 
-This script should be run in the directory containing the *SraRunTable.txt*
-file.
-
 ```
-sbatch 00-download_SRA.sh
+sbatch 01-download_SRA.sh
 ```
 --> data/sra/SRR92643*/SRR92643*.sra (12 files)
 --> data/fastq/SRR92643*_S1_L001_I1_001.fast.gz (12 files)
@@ -79,54 +74,55 @@ rm -f cellranger-7.0.0.tar.gz
 --> **data/software/cellranger-7.0.0**
 
 
-# 3) Get CellRanger reference
+# 3. Make CellRanger reference - full genome
 
-## a) Full genome reference
+We will update to use to use the latest Mouse genome/annotation - GRCh38.p13 release
+107 and Gencode Human v41.
 
-We will use the most current reference provided by 10X.
+## a) Retrieve and prepare references
 
 ```
-mkdir data/references
-wget https://cf.10xgenomics.com/supp/cell-exp/refdata-gex-GRCh38-2020-A.tar.gz
-tar -C data/references -xzvf refdata-gex-GRCh38-2020-A.tar.gz
-rm -f refdata-gex-GRCh38-2020-A.tar.gz
+sbatch 03_a-download_and_prepare_references.sh
 ```
---> data/references/refdata-gex-GRCh38-2020-A
+--> data/references/gencode.v41.primary_assembly.annotation.filtered.gtf
+--> data/references/Homo_sapiens.GRCh38.dna.primary_assembly.gencoded.fa
+
+## b) Make Cell Ranger reference
+
+```
+sbatch 03_b-make_Cell_Ranger_reference.sh
+```
 
 # 4) Run Cell Ranger count
 
 ```
-sbatch 02-cellranger.sh
+sbatch 04-cellranger.sh
 ```
 
-# 5) Run Cell Ranger count - exercise 
+# 5. Make Chr21 reference
 
 For the Cell Ranger exercise we need to run SRR9264343 against the chr21 reference.
 We also need to subsample the fastq to 1 million reads
 
-## a) Chr21 reference
+```
+sbatch 05_a-prepare_chr21_reference.sh
+```
+
+# 6. Subsample fastq
+
+For the Cell Ranger exercise we need a fastq with just 1 million reads
 
 ```
-sbatch 01-prepare_chr21_reference.sh
-```
---> *data/references/Homo_sapiens.GRCh38.104.chr21.gtf*
---> *data/references/Homo_sapiens.GRCh38.104.chr.gtf*
---> *data/references/Homo_sapiens.GRCh38.dna.chromosome.21.fa*
---> **data/references/cellranger_index**
-
-## b) Subsample fastq
-
-```
-sbatch 03-subsample_fastq.sh
+sbatch 06-subsample_fastq.sh
 ```
 --> data/fastq_subsample/SRR9264343_S1_L001_I1_001.fastq.gz
 --> data/fastq_subsample/SRR9264343_S1_L001_R1_001.fastq.gz
 --> data/fastq_subsample/SRR9264343_S1_L001_R2_001.fastq.gz
 
-## c) Run Cell Ranger count
+# 7. Run Cell Ranger count - exercise
 
 ```
-sbatch 03-cellranger_exercise.sh
+sbatch 07-cellranger_exercise.sh
 ```
 
 
