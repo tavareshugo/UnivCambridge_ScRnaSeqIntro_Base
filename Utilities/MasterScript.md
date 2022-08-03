@@ -92,11 +92,12 @@ sbatch 03_a-download_and_prepare_references.sh
 ```
 sbatch 03_b-make_Cell_Ranger_reference.sh
 ```
+--> **data/references/refdata-gex-GRCh38.p13-Gencode.v41**
 
 # 4) Run Cell Ranger count
 
 ```
-sbatch 04-cellranger.sh
+sbatch 04-cellranger_count.sh
 ```
 
 # 5. Make Chr21 reference
@@ -105,8 +106,11 @@ For the Cell Ranger exercise we need to run SRR9264343 against the chr21 referen
 We also need to subsample the fastq to 1 million reads
 
 ```
-sbatch 05_a-prepare_chr21_reference.sh
+sbatch 05-prepare_chr21_reference.sh
 ```
+--> **cellranger_index**
+--> gencode.v41.primary_assembly.annotation.chr21.gtf
+--> Homo_sapiens.GRCh38.dna.chromosome.21.fa
 
 # 6. Subsample fastq
 
@@ -124,5 +128,11 @@ sbatch 06-subsample_fastq.sh
 ```
 sbatch 07-cellranger_exercise.sh
 ```
+--> **data/cellranger_exercise/ETV6_RUNX1_rep1/**
 
+# 8. Make sample sheet
+
+```
+08-make_sample_sheet.R
+```
 
