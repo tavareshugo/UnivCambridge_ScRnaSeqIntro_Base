@@ -1,6 +1,7 @@
 #!/bin/bash
 #SBATCH -J CellRanger_count 
-#SBATCH -o cellranger_count.%j_%a.log
+#SBATCH -o cellranger_count.%j.out
+#SBATCH -e cellranger_count.%j.err
 #SBATCH --nodes=1
 #SBATCH --mincpus 16 
 #SBATCH --mem=64G
@@ -29,8 +30,8 @@ cellranger count \
 	--localmem=64
 
 # move to output directory
-mkdir -p data/cellranger_exercise/
-mv ETV6_RUNX1_rep1 data/cellranger_exercise/.
+mkdir -p cellranger_exercise/
+mv ETV6_RUNX1_rep1 cellranger_exercise/.
 
 rm -f __ETV6_RUNX1_rep1.mro
 

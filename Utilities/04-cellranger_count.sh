@@ -1,11 +1,11 @@
 #!/bin/bash
 #SBATCH -J CellRanger_count 
-#SBATCH -o cellranger_count.%j_%a.log
+#SBATCH -o CellRanger_count.%j_%a.out
+#SBATCH -e CellRanger_count.%j_%a.err
 #SBATCH -a 2-13 
-#SBATCH --nodes=1
 #SBATCH --mincpus 16 
 #SBATCH --mem=64G
-#SBATCH --time=2-03:22:42
+#SBATCH --time=4-03:22:42
 
 set -ex
 
@@ -16,13 +16,13 @@ echo "Start: $(date)"
 crDir=`readlink -f data/software/cellranger-7.0.0`
 export PATH=${crDir}:${PATH}
 
-cd data/references
+cd data
 
 # get sample information from the table
 ID=`head -n $SLURM_ARRAY_TASK_ID SraRunTable.txt | tail -n 1 | cut -d "," -f 1`
 
 # reference genome
-REF="references/refdata-gex-GRCh38-2020-A"
+REF="references/refdata-gex-GRCh38.p13-Gencode.v41"
 
 # run cellranger count pipeline
 cellranger count \
@@ -34,8 +34,8 @@ cellranger count \
 	--localmem=64
 
 # move to output directory
-mkdir -p data/cellranger/
-mv ${ID} data/cellranger/
+mkdir -p cellranger/
+mv ${ID} cellranger/
 
 rm -f __*.mro
 
