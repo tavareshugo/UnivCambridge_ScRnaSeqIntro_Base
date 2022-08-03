@@ -20,8 +20,8 @@ export PATH=${crDir}:${PATH}
 # references
 cd references
 genome=refdata-gex-GRCh38.p13-Gencode.v41
-fasta="Homo_sapiens.GRCh38.dna.primary_assembly.gencoded.fa.gz"
-gtf="gencode.v41.primary_assembly.annotation.filtered.gtf.gz"
+fasta="Homo_sapiens.GRCh38.dna.primary_assembly.gencoded.fa"
+gtf="gencode.v41.primary_assembly.annotation.filtered.gtf"
 
 # mkref
 cellranger mkref --genome=${genome} \

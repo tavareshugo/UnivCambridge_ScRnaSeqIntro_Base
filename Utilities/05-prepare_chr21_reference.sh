@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH -J mkref
-#SBATCH -o 05-prepare_chr21_reference.%j.log
-#SBATCH -e 05-prepare_chr21_reference.%j.err
+#SBATCH -J prepare_chr21_reference
+#SBATCH -o prepare_chr21_reference.%j.log
+#SBATCH -e prepare_chr21_reference.%j.err
 #SBATCH -c 8
 #SBATCH -t 12:00:00
 #SBATCH --mem 16G
@@ -29,15 +29,13 @@ zcat ${fasta_lcl} |
            -e 's/^>([0-9]+|[XY]) />chr\1 /' \
            -e 's/^>MT />chrM /' \
     > ${fasta_gencoded}
-
+rm -f ${fasta_lcl}
 
 # filter gtf for chr 21
 
-gtf_filtered="gencode.v41.primary_assembly.annotation.filtered.gtf.gz"
-gtf_chr21="gencode.v41.primary_assembly.annotation.filtered.gtf"
-zcat ${gtf_filtered} |
- grep -E "^21|^#" \
-  > ${gtf_chr21}
+gtf_filtered="gencode.v41.primary_assembly.annotation.filtered.gtf"
+gtf_chr21="gencode.v41.primary_assembly.annotation.chr21.gtf"
+grep -E "^chr21|^#" ${gtf_filtered} > ${gtf_chr21}
 
 #### cellranger indexing ####
 
