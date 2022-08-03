@@ -11,11 +11,12 @@ set -ex
 
 echo "Start: $(date)"
 
-cd data
 
 # Cell Ranger software
-crDir=`readlink -f software/cellranger-7.0.0`
+crDir=`readlink -f data/software/cellranger-7.0.0`
 export PATH=${crDir}:${PATH}
+
+cd data/references
 
 # get sample information from the table
 ID=`head -n $SLURM_ARRAY_TASK_ID SraRunTable.txt | tail -n 1 | cut -d "," -f 1`
