@@ -1,0 +1,72 @@
+Utilities/09-QC_and_Filtering.R:
+    input - Cell Ranger outputs & sample sheet
+    output - data/R_objects/Caron_filtered.full.rds [33197 x 49499] {12 samples}
+    outpu - data/R_objects/Caron_filtered.500.rds [23026 x 6000] {12 samples}
+
+04_Preprocessing_And_QC.Exercise.Rmd:
+    input - Cell Ranger outputs & sample sheet
+    output -  Caron_filtered_genes.rds (not found)
+
+05_Normalisation.Rmd:
+    input - Caron_filtered.rds (from ????) [28377 x 46571] {12 samples}
+    output - caron_postDeconv_5hCellPerSpl.Rds [28377  5500] {11 samples} - loses one of the tech reps
+    output - caron_postSct_5hCellPerSpl.Rds
+
+06_FeatureSelectionAndDimensionalityReduction.Rmd:
+    input - caron_postDeconv_5hCellPerSpl.Rds (from 05_Normalisation.Rmd)
+    output - caron_postDeconv_5hCellPerSpl_dimRed.Rds [17700 x 5500] {11 samples}
+
+07_BatchCorrection.Rmd (deprecated):
+    input - postQC_caron_allcells.rds (???)
+    output - BC_sample1.rds (SRR9264351)
+    output - BC_sample2.rds (SRR9264352)
+    output - BC_sample3.rds (both the above)
+
+07_DataSetIntegration_PBMMC_ETV6-RUNX1.Rmd (deprecated):
+    input - caron_postDeconv_5hCellPerSpl_dimRed.Rds 
+                    (from 06_FeatureSelectionAndDimensionalityReduction.Rmd)
+    output - DataIntegration_all_sce.Rds 
+      (a list with sce objects for each of the ETV6-RUNX1 and 3 of the PBMMC 
+       samples - only 1 of the tech reps). {7 samples}
+    output - DataIntegration_uncorrected.Rds [17700 x 3500] {7 samples}
+    output - DataIntegration_mnn.out.Rds (MNN corrected data) [9479 x 3500] {7 samples}
+
+Utilities/BC_prep.R:
+    input - BC_sample1.rds (from 07_BatchCorrection.Rmd)
+    input - BC_sample2.rds (from 07_BatchCorrection.Rmd)
+    output - BC_sample1_dimred.rds [28377 x 938] {1 sample}
+    output - BC_sample2_dimred.rds [28377 x 1151] {1 sample}
+    output - BC_dec1_dimred.rds 
+    output - BC_dec2_dimred.rds 
+
+    input - DataIntegration_all_sce.Rds (from 07_BatchCorrection.Rmd)
+    output - DataIntegration_all_sce_dimred.Rds [17700 x 3500]
+
+    input - postQC_caron_allcells.rds (???)
+    output - 07_semiprocessedCaronSamples.rds [28377 x 30773]
+
+
+07_DatasetIntegration.Rmd:
+    input - BC_sample1_dimred.rds (from Utilities/BC_prep.R)
+    input - BC_sample2_dimred.rds (from Utilities/BC_prep.R)
+    input - BC_dec1_dimred.rds (from Utilities/BC_prep.R) 
+    input - BC_dec2_dimred.rds (from Utilities/BC_prep.R) 
+      (DataFrame object with mean-variance results from modelGeneVar())
+      (DataFrame object with mean-variance results from modelGeneVar())
+  for exercise:
+    input - DataIntegration_all_sce_dimred.Rds (from Utilities/BC_prep.R)
+        
+Utilities/08_Make_Start_Object_for_Materials.R:
+    input - DataIntegration_all_sce_dimred.Rds (from Utilities/BC_prep.R)
+    output - DataIntegration_mnn.Rds [17486 x 3500] {7 samples}
+
+08_Clustering_Materials.Rmd:
+    input - DataIntegration_mnn.Rds (from Utilities/08_Make_Start_Object_for_Materials.R)
+    output - Caron_clustering_material.rds 
+
+09_ClusterMarkerGenes.Rmd:
+    input - Caron_clustering_material.rds (from 08_Clustering_Materials.Rmd)
+
+10_MultiSplComp.Rmd:
+    input - 07_semiprocessedCaronSamples.rds (from Utilities/BC_prep.R)
+
