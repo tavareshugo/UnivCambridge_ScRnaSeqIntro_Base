@@ -4,18 +4,11 @@ author: "Stephane Ballereau"
 date: "June 2022"
 output:
   ioslides_presentation:
-    logo: ../Images/uniOfCamCrukLogos.png
-    smaller: yes
-    widescreen: yes
+    widescreen: true
+    smaller: true
+    logo: Images/uniOfCamCrukLogos.png
     css: css/stylesheet.css
-  beamer_presentation: default
-  slidy_presentation: default
 ---
-    
-```{r include=FALSE}
-library(tidyr)
-library(dplyr)
-```
 
 ## Outline
 

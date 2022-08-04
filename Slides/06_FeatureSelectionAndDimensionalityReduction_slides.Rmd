@@ -6,8 +6,7 @@ output:
   ioslides_presentation:
     widescreen: true
     smaller: true
-    incremental: false 
-    logo: ../Images/uniOfCamCrukLogos.png
+    logo: Images/uniOfCamCrukLogos.png
     css: css/stylesheet.css
 ---
 
