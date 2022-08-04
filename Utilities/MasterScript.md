@@ -136,3 +136,17 @@ sbatch 07-cellranger_exercise.sh
 08-make_sample_sheet.R
 ```
 
+# 9. Run QC/Filtering --> make input objects for 05_Normalisation session
+
+First we run QC/cell filtering on the full data set. The we create a subset
+object with just 500 cells per sample - this can be used in the demo sessions
+during the course.
+
+```
+sbatch 09-QC_and_Filtering.R
+```
+--> data/R_objects/Caron_filtered.500.rds
+--> data/R_objects/Caron_filtered.full.rds
+
+# 10. Run Normalisation
+
