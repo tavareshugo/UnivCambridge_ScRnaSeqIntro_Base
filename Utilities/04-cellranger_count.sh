@@ -37,6 +37,6 @@ cellranger count \
 mkdir -p cellranger/
 mv ${ID} cellranger/
 
-rm -f __*.mro
+rm -f __${ID}.mro
 
 echo "End: $(date)"
