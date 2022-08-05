@@ -1,7 +1,7 @@
 Utilities/09-QC_and_Filtering.R:
     input - Cell Ranger outputs & sample sheet
     output - data/R_objects/Caron_filtered.full.rds [33197 x 49499] {12 samples}
-    outpu - data/R_objects/Caron_filtered.500.rds [23026 x 6000] {12 samples}
+    output - data/R_objects/Caron_filtered.500.rds [23026 x 6000] {12 samples}
 
 04_Preprocessing_And_QC.Exercise.Rmd:
     input - Cell Ranger outputs & sample sheet
@@ -9,7 +9,7 @@ Utilities/09-QC_and_Filtering.R:
 
 05_Normalisation.Rmd:
     input - Caron_filtered.rds (from ????) [28377 x 46571] {12 samples}
-    output - caron_postDeconv_5hCellPerSpl.Rds [28377  5500] {11 samples} - loses one of the tech reps
+    output - caron_postDeconv_5hCellPerSpl.Rds [28377 x 5500] {11 samples} - loses one of the tech reps
     output - caron_postSct_5hCellPerSpl.Rds
 
 06_FeatureSelectionAndDimensionalityReduction.Rmd:
