@@ -66,6 +66,10 @@ sce <- sce[, !cell_qc_results$discard]
 # fix the per cell metrics
 colData(sce) <- colData(sce)[,1:5]
 sce <- addPerCellQC(sce, BPPARAM = bp.params)
+
+# add per gene metrics
+sce <- addPerFeatureQC(sce, BPPARAM = bp.params)
+
 saveRDS(sce, "data/R_objects/Caron_filtered.full.rds")
 
 # Now sub-sample to 500 cells per sample
@@ -86,9 +90,11 @@ sce.sub <- sce.sub[detectedGenes,]
 
 # update cell QC metrics
 colData(sce.sub) <- colData(sce.sub)[,1:5]
-sce.sub <- addPerCellQC(sce.sub)
+is.mito <- rowData(sce.sub)$Chromosome%in%c("chrM", "MT")
+sce.sub <- addPerCellQC(sce.sub, subsets=list(Mito=is.mito), BPPARAM = bp.params)
 
 # update gene QC metrics
+rowData(sce.sub) <- rowData(sce.sub)[,1:4]
 sce.sub <- addPerFeatureQC(sce.sub, BPPARAM = bp.params)
 
 # Write object to file
