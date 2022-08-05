@@ -150,3 +150,8 @@ sbatch 09-QC_and_Filtering.R
 
 # 10. Run Normalisation
 
+Data are normalised using the scran/scuttle deconvolution method.
+
+```
+sbatch 10-Normalisation.R
+```
