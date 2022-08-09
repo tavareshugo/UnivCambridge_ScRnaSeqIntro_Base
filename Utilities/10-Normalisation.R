@@ -47,7 +47,7 @@ clust <- quickCluster(sce)
 sce <- computePooledFactors(sce, cluster=clust, min.mean=0.1)
 
 # log Normalize the Counts
-sce <- logNormCounts(sce) # adds logcounts
+sce <- logNormCounts(sce)
 
 # save normalised object
 saveRDS(sce, "data/R_objects/Caron_normalized.500.rds")
