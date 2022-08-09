@@ -155,3 +155,13 @@ Data are normalised using the scran/scuttle deconvolution method.
 ```
 sbatch 10-Normalisation.R
 ```
+--> data/R_objects/Caron_normalized.500.rds
+--> data/R_objects/Caron_normalized.full.rds
+
+# 11. Run Dimension reduction
+
+```
+sbatch 11-Dimension_Reduction.R
+```
+--> data/R_objects/Caron_dimRed.500.rds
+--> data/R_objects/Caron_dimRed.full.rds

@@ -11,6 +11,9 @@
 
 library(scater) 
 library(scran)
+library(BiocParallel)
+
+bpp <- MulticoreParam(8)
 
 ## Full data set 
 # Load data
@@ -27,11 +30,11 @@ hvgs <- getTopHVGs(gene_var, prop=0.1)
 sce <- runPCA(sce, subset_row = hvgs)
 
 # tSNE
-sce <- runTSNE(sce, dimred="PCA", n_dimred=10)
+sce <- runTSNE(sce, dimred="PCA", n_dimred=10, BPPARAM = bpp)
 
 # UMAP
 
-sce <- runUMAP(sce, dimred="PCA", n_dimred=10)
+sce <- runUMAP(sce, dimred="PCA", n_dimred=10, BPPARAM = bpp)
 
 # save object
 
@@ -50,9 +53,6 @@ hvgs <- getTopHVGs(gene_var, prop=0.1)
 
 # PCA
 sce <- runPCA(sce, subset_row = hvgs)
-
-# run denoise PCA step
-sce <- denoisePCA(sce, technical = gene_var)
 
 # tSNE
 sce <- runTSNE(sce, dimred="PCA", n_dimred=10)
