@@ -168,8 +168,6 @@ sbatch 11-Dimension_Reduction.R
 
 # 12. Create objects for data set intergration materials
 
-## a) Seperate PBMMC_1 technical replicate objects
-
 Prepare two separate object for the two PBMMC_1 technical replicates.
 These are the filtered cells from 09-QC_and_Filtering.R. The two objects
 are filtered to remove undetected genes - this results in the two objects
@@ -181,3 +179,13 @@ sbatch 12-Make_dataset_intergration_PBMMC_1_objects.R
 ```
 --> data/R_objects/PBMMC_1a_dimRed.rds
 --> data/R_objects/PBMMC_1b_dimRed.rds
+
+# 13. Batch correction
+
+Batch correct the 500 cell per sample data set for use in the clustering
+demonstration.
+
+```
+sbatch 13-Batch_Correction.R
+```
+--> data/R_objects/Caron_batch_corrected.500.rds
