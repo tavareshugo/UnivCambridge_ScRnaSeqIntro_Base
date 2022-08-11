@@ -63,14 +63,14 @@ samples from the Caron data set. For the purposes of these materials, in the
 interests of time, each sample has been downsampled to only contain 500 cells.
 
 ```{r load_data}
-sce <- readRDS("Robjects/DataIntegration_mnn.Rds")
+sce <- readRDS("R_objects/Caron_batch_corrected.500.rds")
 ```
 
 
 ```{r echo=FALSE}
 colData(sce) %>% 
   as.data.frame() %>% 
-  select(SampleName, SampleGroup, DatasetName) %>% 
+  select(SampleName, BioSample, SampleGroup) %>% 
   add_count(SampleName, name="Number of Cells") %>% 
   distinct() %>% 
   datatable(options = list(dom="t"), rownames = FALSE)

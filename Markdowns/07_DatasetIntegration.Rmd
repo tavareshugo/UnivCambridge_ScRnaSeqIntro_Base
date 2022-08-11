@@ -73,34 +73,20 @@ We already have the necessary objects prepared, and load them for this session:
 # read the data ----
 
 # SCE objects for the two technical replicates
-sce_rep1 <- readRDS("../CourseMaterials/Robjects/BC_sample1_dimred.rds")
-sce_rep2 <- readRDS("../CourseMaterials/Robjects/BC_sample2_dimred.rds")
+sce_rep1 <- readRDS("R_objects/PBMMC_1a_dimRed.rds")
+sce_rep2 <- readRDS("R_objects/PBMMC_1b_dimRed.rds")
 
 # add information about which replicate each sample is from
 # this is added as a new column in the colData DataFrame of the object
 colData(sce_rep1)$batch <- "1"
 colData(sce_rep2)$batch <- "2"
-
-# DataFrame objects with mean-variance results from modelGeneVar()
-gene_var_rep1 <- readRDS("../CourseMaterials/Robjects/BC_dec1_dimred.rds")
-gene_var_rep2 <- readRDS("../CourseMaterials/Robjects/BC_dec2_dimred.rds")
 ```
 
-```{r, eval=FALSE}
-# read the data ----
+```{r}
 
-# SCE objects for the two technical replicates
-sce_rep1 <- readRDS("Robjects/BC_sample1_dimred.rds")
-sce_rep2 <- readRDS("Robjects/BC_sample2_dimred.rds")
-
-# add information about which replicate each sample is from
-# this is added as a new column in the colData DataFrame of the object
-colData(sce_rep1)$batch <- "1"
-colData(sce_rep2)$batch <- "2"
-
-# DataFrame objects with mean-variance results from modelGeneVar()
-gene_var_rep1 <- readRDS("Robjects/BC_dec1_dimred.rds")
-gene_var_rep2 <- readRDS("Robjects/BC_dec2_dimred.rds")
+# Subset the mean-variance results
+gene_var_rep1 <- modelGeneVar(sce_rep1)
+gene_var_rep2 <- modelGeneVar(sce_rep2)
 ```
 
 
@@ -332,7 +318,7 @@ When you use a single `sce` object you must specify what you want to use as a ba
 # Exercise 1 ----
 
 # read ETV6_RUNX1 and PBMMC datasets
-sce_all <- readRDS("Robjects/DataIntegration_all_sce_dimred.Rds")
+sce_all <- readRDS("R_objects/Caron_dimRed.500.rds")
 
 # tabulate the number of cells per sample
 table(sce_all$SampleName)
@@ -356,16 +342,17 @@ plotReducedDim(sce_all, dimred = "UMAP", colour_by = "SampleName")
 plotReducedDim(sce_all, FIXME)
 ```
 
-```{r, echo=FALSE, purl=FALSE}
-sce_all <- readRDS("../CourseMaterials/Robjects/DataIntegration_all_sce_dimred.Rds")
-```
-
-
 <details><summary>Answer</summary>
 
 Here is the corrected code:
 
 ```{r, purl=FALSE}
+# read ETV6_RUNX1 and PBMMC datasets
+sce_all <- readRDS("R_objects/Caron_dimRed.500.rds")
+
+# tabulate the number of cells per sample
+table(sce_all$SampleName)
+
 # obtain a batch-corrected SCE object
 sce_all_corrected <- quickCorrect(sce_all, batch = sce_all$SampleName)$corrected
 

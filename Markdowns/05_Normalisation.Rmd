@@ -85,19 +85,8 @@ We will load the R object created after QC and check its content (class, dimensi
 
 ```{r Caron_norm_readIn_5hCellPerSpl}
 # Read object in:
-sce <- readRDS("../Robjects/Caron_filtered.rds")
+sce <- readRDS("R_objects/Caron_filtered.500.rds")
 sce
-```
-
-```{r}
-# rename column(s) if need be
-# we need 'SampleName'
-dd <- colData(sce) %>%
-  data.frame() %>%
-  rename(SampleName=Sample) %>%
-  DataFrame()
-
-colData(sce) <- dd  
 ```
 
 We can also count the number of cells for each sample:
@@ -109,90 +98,13 @@ colData(sce) %>%
   data.frame() %>%
   # group by some columns only: SampleName, SampleId, SampleGroup
   # (could do with SampleName only but we would miss SampleId, SampleGroup later)
-  group_by(SampleName, SampleId, SampleGroup) %>%
+  group_by(SampleName, BioSample, Sample, SampleGroup) %>%
   # count cells for each group
   summarise(nbCells=n()) %>%
   # display output table
   DT::datatable(rownames = FALSE,
                 options = list(dom="tpl", pageLength = 15))
 ```
-
-For analyses to run within the time allocated to sessions,
-we will subsample cells down to 500 per sample:
-
-```{r Caron_norm_downsample, eval=FALSE}
-# number of cells to keep
-nbCells <- 500
-
-# have new list of cell barcodes for each sample
-vec.bc <- colData(sce) %>%
-	data.frame() %>%
-	dplyr::filter(!SampleId == "SRR9264351") %>%
-	group_by(SampleName) %>%
-	sample_n(nbCells) %>%
-	pull(Barcode)
-```
-
-```{r, include=FALSE}
-# when re-running after a first downsampling and downstream analysis,
-# read list of barcodes selected instead.
-sceTmp <- readRDS("../Robjects/caron_postQc_5hCellPerSpl.Rds")
-vec.bc <- colData(sceTmp)$Barcode
-rm(sceTmp)
-```
-
-```{r}
-# subsetting a SCE (SingleCellExperiment) object requires indices not names
-# so find index for each cell we will keep:
-tmpInd <- which(colData(sce)$Barcode %in% vec.bc) # mind QC metrics will be wrong
-# subset cells from the existing SCE object:
-sce <- sce[,tmpInd] # this update 'sce', e.g. its assays, but not the cell meta data.
-
-colData(sce) %>%
-  data.frame() %>%
-  dplyr::select(SampleName, SampleId, SampleGroup) %>%
-  group_by(SampleName, SampleId, SampleGroup) %>%
-  summarise(nbCells=n()) %>%
-  DT::datatable(rownames = FALSE,
-                options = list(dom="tpl", pageLength = 15, nrows=20))
-```
-
-Update per-gene QC metrics.
-
-<!--
-# mind that genes were filtered using all cells, not just those sampled here.
-# check for lowly expressed genes:
--->
-
-```{r Caron_norm_filterGenes}
-# for each gene in each cell: is it expressed?
-exprLogic <- counts(sce) > 0
-# count cells where gene is expressed,
-# and ask if the number of cells is gt 5
-detectedGenes <- rowSums(exprLogic) > 5
-# count genes in each class, not-detected and detected
-table(detectedGenes)
-
-# remove these genes:
-sce <- sce[detectedGenes,] # removes genes but does not update QC metrics.
-
-# update cell QC metrics
-sce$sum <- NULL
-sce$detected <- NULL
-sce$total <- NULL
-sce <- addPerCellQC(sce)
-
-# update gene QC metrics
-sce <- addPerFeatureQC(sce, BPPARAM = bpp)
-```
-
-We write the R object to 'caron_postQc_5hCellPerSpl.Rds'.
-
-```{r Caron_downsample_write, eval=FALSE}
-# Write object to file
-saveRDS(sce, "../Robjects/caron_postQc_5hCellPerSpl.Rds")
-```
-
 ## Scaling normalization
 
 In scaling normalization, the “normalization factor” is an estimate of the
@@ -385,7 +297,7 @@ print(assayNames(sce))
 
 ```{r sce_write_norm_Caron_5hCellPerSpl}
 # write to file
-saveRDS(sce, "../Robjects/caron_postDeconv_5hCellPerSpl.Rds")
+#saveRDS(sce, "../Robjects/caron_postDeconv_5hCellPerSpl.Rds")
 ```
 
 ## Exercise 1
@@ -424,7 +336,7 @@ print(class(counts))
 # check the dimensions of the object
 print(dim(counts))
 # name columns (cells) with barcodes
-colnames(counts) <- colData(sce)$Barcode
+colnames(counts) <- colnames(sce)
 ```
 
 ### Inspect data
@@ -714,7 +626,7 @@ vstMat <- as(vst_out$y[rownames(sce),], "dgCMatrix")
 # so we will not pass vstMat colnames when copying it in a assay slot,
 # but must first check that barcodes are indeed in the same order
 # in sce and vstMat.
-all(colnames(vstMat) == sce$Barcode)
+all(colnames(vstMat) == colnames(sce))
 all(rownames(vstMat) == rownames(sce))
 assay(sce, "sctrans_norm", withDimnames=FALSE) <- vstMat
 ```
@@ -723,7 +635,7 @@ assay(sce, "sctrans_norm", withDimnames=FALSE) <- vstMat
 
 ```{r sce_write_sct_Caron_5hCellPerSpl, eval=FALSE}
 # write to file
-saveRDS(sce, "../Robjects/caron_postSct_5hCellPerSpl.Rds")
+#saveRDS(sce, "../Robjects/caron_postSct_5hCellPerSpl.Rds")
 ```
 
 ## Exercise 2

@@ -13,7 +13,6 @@ subtitle: Feature Selection and Dimensionality Reduction
 ---
 
 ```{r setup, echo=FALSE, include=FALSE, message=FALSE, purl=FALSE}
-knitr::opts_knit$set(root.dir = here::here("CourseMaterials"))
 knitr::opts_chunk$set(error=FALSE, message=FALSE, warning=FALSE, cache=TRUE)
 # knitr::opts_chunk$set(fig.width=7, fig.height=7)
 # knitr::opts_chunk$set(dev="CairoPNG")
@@ -42,7 +41,7 @@ We will load the _SingleCellExperiment_ object generated in the [Normalisation](
 
 ```{r, cache=FALSE}
 # read data ----
-sce <- readRDS("Robjects/caron_postDeconv_5hCellPerSpl.Rds")
+sce <- readRDS("R_objects/Caron_normalized.500.rds")
 sce
 ```
 
@@ -775,7 +774,7 @@ Seurat is another very popular scRNA-seq analysis package and provides useful to
 
 ```{r, purl=FALSE}
 # read our original SCE object
-sce <- readRDS("Robjects/caron_postDeconv_5hCellPerSpl.Rds")
+sce <- readRDS("R_objects/Caron_normalized.500.rds")
 
 # convert SCE object to a Seurat object 
 library(Seurat)
