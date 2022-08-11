@@ -12,17 +12,20 @@
 # correction tSNE and UMAP dimension reduction are run using the corrected data.
 
 library(scater) 
-library(scran)
 library(batchelor)
-library(BiocParallel)
-
-bpp <- MulticoreParam(8)
+library(stringr)
 
 # Load data
 sce <- readRDS("data/R_objects/Caron_dimRed.500.rds")
 sce <- sce[,sce$SampleGroup%in%c("ETV6-RUNX1", "PBMMC")]
 
-sce_corrected <- quickCorrect(sce, batch = sce$SampleName)$corrected
+merge_order <- list(list(c("PBMMC_1a", "PBMMC_1b"), "PBMMC_2", "PBMMC_3"),
+                    list("ETV6-RUNX1_1","ETV6-RUNX1_2",
+                         "ETV6-RUNX1_3", "ETV6-RUNX1_4"))
+set.seed(123)
+sce_corrected <- quickCorrect(sce, 
+                              PARAM = FastMnnParam(merge.order = merge_order),
+                              batch = sce$SampleName)$corrected
 
 reducedDim(sce, "corrected") <- reducedDim(sce_corrected, "corrected")
 assay(sce, "reconstructed") <- assay(sce_corrected, "reconstructed")
