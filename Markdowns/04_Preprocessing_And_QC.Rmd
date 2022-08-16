@@ -344,9 +344,8 @@ We will now add information from the sample metadata table to the `colData`
 object.
 
 ```{r add_metadata}
-rn <- rownames(colData(sce))
 colData(sce) <- merge(colData(sce), samplesheet, by="Sample", sort=FALSE)
-rownames(colData(sce)) <- rn
+rownames(colData(sce)) <- colnames(sce)
 ```
 
 ## Undetected genes
@@ -377,8 +376,8 @@ There are many ways we could annotate our genes in R. We will use
 `AnnotationHub`. AnnotationHub has access to a large number of annotation 
 databases. Our genes are currently annotated with Ensembl IDs, so we will use 
 Ensembl human database. We will also specify that we want the database 
-corresponding to Ensembl release 98 as this the release from which the
-CellRanger gene annotation was derived.
+corresponding to Ensembl release 107 as this the release from which the
+CellRanger gene annotation was generated.
 
 ```{r annotate_genes}
 ah <- AnnotationHub()
@@ -615,7 +614,11 @@ filter metric and one called "discard" that combined the three logicals.
 ```{r adapThres_quickPerCellQC}
 cell_qc_results <- quickPerCellQC(colData(sce),
 			  percent_subsets=c("subsets_Mito_percent"))
-colSums(as.data.frame(cell_qc_results))
+cell_qc_results %>%
+  as.data.frame() %>% 
+  mutate(SampleName=colData(sce)$SampleName) %>% 
+  group_by(SampleName)  %>%
+  summarise(across(contains("_"), sum))
 ```
 
 ### Assumptions
@@ -630,20 +633,25 @@ RNA content or high mitochondrial content.
 
 ### Considering experimental factors when filtering
 
-The HCA and Caron data sets analysed here may have been obtained in experiments
-with different conditions, such as cell preparation or sequencing depth. Such
-differences between these two batches would affect the adaptive thesholds
-discussed above - that is, the distributions of the metrics may be different in
-each batch and so perhaps we should really apply the adaptive thresholding for
-each batch. The `quickPerCellQC` has a "batch" argument that allows us to
-specify with samples belong to which batches. The batches are then filtered
-independently. 
+The samples analysed here may have been processed in different batches leading
+to differences in the overall distribution of UMI counts, numbers of genes
+detected and mitochondrial content. Such differences would affect the adaptive
+thesholds discussed above - that is, as the distributions of the metrics differ,
+perhaps we should really apply the adaptive thresholding for each batch rather
+than universally across all samples. The `quickPerCellQC` has a "batch" argument
+that allows us to specify with samples belong to which batches. The batches are
+then filtered independently.
 
 ```{r quickPerCellQC_batch_compute}
 batch.cell_qc_results <- quickPerCellQC(colData(sce),
                                 percent_subsets=c("subsets_Mito_percent"),
-                                batch=sce$DatasetName)
-colSums(as.data.frame(batch.cell_qc_results))
+                                batch=sce$Sample)
+
+batch.cell_qc_results %>%
+  as.data.frame() %>% 
+  mutate(SampleName=colData(sce)$SampleName) %>% 
+  group_by(SampleName)  %>%
+  summarise(across(contains("_"), sum))
 ```
 
 The table below shows how the thresholds for each metric differ between the
@@ -712,59 +720,46 @@ plotColData(sce,
     guides(colour=guide_legend(title="Discarded"))
 ```
 
-There are some distinct differences, most noticeable is that there is now no
-filtering using library size. The venn diagrams below show how the number of
-discarded droplets in HCA and Caron have changed for each filter in comparison
-to when the MAD filtering was applied across all samples.
+There are some distinct differences, most noticeable is that some cells are now
+being filtered based on library size for both ETV6-RUNX1_1 and PBMMC_1a. The
+venn diagrams below show how the number of discarded droplets in have changed
+for each filter in comparison to when the MAD filtering was applied across all
+samples.
 
 ```{r, fig.width=12, fig.height=8}
 libDat <- tibble(`All together`=cell_qc_results$low_lib_size, 
                  `By batch`=batch.cell_qc_results$low_lib_size,
                  Batch=sce$Sample)
-    
-ph1 <- libDat %>% 
-    dplyr::filter(Batch=="HCA") %>% 
-    ggvenn(show_percentage = FALSE) +
-        labs(title="Library Size - HCA")
+
 pc1 <- libDat %>% 
-    dplyr::filter(Batch=="Caron") %>% 
     ggvenn(show_percentage = FALSE) +
-        labs(title="Library Size - Caron")
+        labs(title="Library Size")
 
 nGenDat <- tibble(`All together`=cell_qc_results$low_n_features, 
                   `By batch`=batch.cell_qc_results$low_n_features,
                  Batch=sce$DatasetName)
-ph2 <- nGenDat %>% 
-    dplyr::filter(Batch=="HCA") %>% 
-        ggvenn(show_percentage = FALSE) +
-            labs(title="Genes detected - HCA")
+
 pc2 <- nGenDat %>% 
-    dplyr::filter(Batch=="Caron") %>% 
            ggvenn(show_percentage = FALSE) +
-            labs(title="Genes detected - Caron")
+            labs(title="Genes detected")
 
 
 mitDat <- tibble(`All together`=cell_qc_results$high_subsets_Mito_percent, 
        `By batch`=batch.cell_qc_results$high_subsets_Mito_percent,
                  Batch=sce$DatasetName)
-ph3 <- mitDat %>% 
-    dplyr::filter(Batch=="HCA") %>% 
-        ggvenn(show_percentage = FALSE) +
-            labs(title="Mitochondrial UMIs - HCA")
 pc3 <- mitDat %>% 
-    dplyr::filter(Batch=="Caron") %>% 
            ggvenn(show_percentage = FALSE) +
-            labs(title="Mitochondrial UMIs - Caron")
+            labs(title="Mitochondrial UMIs")
 
-(pc1 + pc2 + pc3) / (ph1 + ph2 + ph3)
+pc1 + pc2 + pc3
 ```
 
-The most striking difference is in the filtering of the Caron data by library
-size. As we can see from the violin plots the ABMMC sample from the HCA has a
-radically different library size distribution to the Caron samples, with all
-cells having > 1000 UMIs. When we applied the adaptive filters across all
-samples, this sample caused the MADs to be distorted and resulted in a
-threshold that was inappropriately high for the Caron samples.
+The most striking difference is in the filtering by library size. As we can see
+from the violin plots ETV6-RUNX1_1 has a markedly different library size
+distribution to the other three samples. When we applied the adaptive filters
+across all samples, the lower distributions of the other three samples caused
+the MADs to be distorted and resulted in a threshold that was inappropriately
+low for the ETV6-RUNX1_1 samples.
 
 ## Filtering out poor quality cells
 
@@ -798,7 +793,7 @@ exclude many good quality cells. To demonstrate these methods, we'll just
 extract one sample from our SingleCellExperiment object.
 
 ```{r}
-sce.BM1 <- sce[ , sce$Sample == "PBMMC_1"]
+sce.BM1 <- sce[ , sce$SampleName == "PBMMC_1a"]
 ```
 
 ## Using "outlyingness"
