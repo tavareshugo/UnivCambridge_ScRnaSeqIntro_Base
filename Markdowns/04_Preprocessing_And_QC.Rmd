@@ -431,24 +431,21 @@ We can use the `scater` function `plotColData` to generate plots that provide a
 look at these distributions on a per sample basis.
 
 ```{r plot_total_counts, fig.width=12, fig.height=4}
-plotColData(sce, x="Sample", y="sum",other_fields="SampleGroup") + 
-    facet_wrap(~SampleGroup, nrow=1, scales = "free_x") + 
+plotColData(sce, x="SampleName", y="sum") + 
     scale_y_log10() + 
     ggtitle("Total count")
 ```
 
 
 ```{r plot_detected_genes, fig.width=12, fig.height=4}
-plotColData(sce, x="Sample", y="detected", other_fields="SampleGroup") + 
-    facet_wrap(~SampleGroup, nrow=1, scales = "free_x") + 
+plotColData(sce, x="SampleName", y="detected") + 
     scale_y_log10() + 
     ggtitle("Detected features")
 ```
 
 
 ```{r plot_MT_content, fig.width=12, fig.height=4}
-plotColData(sce, x="Sample", y="subsets_Mito_percent", other_fields="SampleGroup") + 
-    facet_wrap(~SampleGroup, nrow=1, scales = "free_x") +
+plotColData(sce, x="SampleName", y="subsets_Mito_percent") + 
     ggtitle("Mito percent")
 ```
 
@@ -516,12 +513,7 @@ We can view the effect of the filtering using `plotColData`.
 
 ```{r plot_library_size_filtering, fig.width=12, fig.height=5}
 colData(sce)$low_lib_size <- low_lib_size
-plotColData(sce, 
-            x="Sample", 
-            y="sum",
-            other_fields="SampleGroup", 
-            colour_by = "low_lib_size") + 
-    facet_wrap(~SampleGroup, nrow=1, scales = "free_x") + 
+plotColData(sce, x="SampleName", y="sum", colour_by = "low_lib_size") + 
     scale_y_log10() + 
     labs(y = "Total count", title = "Total count") +
     guides(colour=guide_legend(title="Discarded"))
@@ -547,12 +539,7 @@ We can view the effect of the filtering using `plotColData`.
 
 ```{r plot_detected_genes_filtering, fig.width=12, fig.height=5}
 colData(sce)$low_n_features <- low_n_features
-plotColData(sce, 
-            x="Sample", 
-            y="detected",
-            other_fields="SampleGroup", 
-            colour_by = "low_n_features") + 
-    facet_wrap(~SampleGroup, nrow=1, scales = "free_x") + 
+plotColData(sce, x="SampleName", y="detected", colour_by = "low_n_features") + 
     scale_y_log10() + 
     labs(y = "Genes detected", title = "Genes detected") +
     guides(colour=guide_legend(title="Discarded"))
@@ -580,12 +567,10 @@ We can view the effect of the filtering using `plotColData`.
 
 ```{r plot_MT_content_filtering, fig.width=12, fig.height=5}
 colData(sce)$high_Mito_percent <- high_Mito_percent
-plotColData(sce,  
-            x="Sample",
+plotColData(sce,
+            x="SampleName",
             y="subsets_Mito_percent",
-            other_fields="SampleGroup",
             colour_by = "high_Mito_percent") + 
-    facet_wrap(~SampleGroup, nrow=1, scales = "free_x") + 
     labs(y = "Percentage mitochondrial UMIs",
          title = "Mitochondrial UMIs") +
     guides(colour=guide_legend(title="Discarded"))
@@ -656,16 +641,18 @@ The table below shows how the thresholds for each metric differ between the
 batch-wise analysis and the analysis using all samples.
 
 ```{r compare_thresholds}
-all.thresholds <- tibble(`Batch`="All",
+all.thresholds <- tibble(`SampleName`="All",
        `Library Size`=attr(cell_qc_results$low_lib_size, "thresholds")[1],
        `Genes detected`=attr(cell_qc_results$low_n_features, "thresholds")[1],
        `Mitochondrial UMIs`=attr(cell_qc_results$high_subsets_Mito_percent, "thresholds")[2])
 
 
-tibble(`Batch`=names(attr(batch.cell_qc_results$low_lib_size, "thresholds")[1,]),
+tibble(`Sample`=names(attr(batch.cell_qc_results$low_lib_size, "thresholds")[1,]),
        `Library Size`=attr(batch.cell_qc_results$low_lib_size, "thresholds")[1,],
        `Genes detected`=attr(batch.cell_qc_results$low_n_features, "thresholds")[1,],
        `Mitochondrial UMIs`=attr(batch.cell_qc_results$high_subsets_Mito_percent, "thresholds")[2,]) %>% 
+    left_join(samplesheet) %>% 
+    select(SampleName, `Library Size`, `Genes detected`, `Mitochondrial UMIs`) %>% 
     bind_rows(all.thresholds) %>% 
     mutate(across(where(is.numeric), round, digits=2)) %>% 
     datatable(rownames = FALSE, options = list(dom="t"))
@@ -683,24 +670,14 @@ sce$discard <- batch.cell_qc_results$discard
 We can visualise how the new filters look using violin plots.
 
 ```{r plot_library_size_batch_filters, fig.width=12, fig.height=4}
-plotColData(sce, 
-            x="Sample", 
-            y="sum",
-            other_fields="SampleGroup", 
-            colour_by = "low_lib_size") + 
-    facet_wrap(vars(SampleGroup), nrow=1, scales = "free_x") + 
+plotColData(sce, x="SampleName", y="sum", colour_by = "low_lib_size") + 
     scale_y_log10() + 
     labs(y = "Total count", title = "Total count") +
     guides(colour=guide_legend(title="Discarded"))
 ```
 
 ```{r plot_detected_genes_batch_filters, fig.width=12, fig.height=4}
-plotColData(sce, 
-            x="Sample", 
-            y="detected",
-            other_fields="SampleGroup", 
-            colour_by = "low_n_features") + 
-    facet_wrap(vars(SampleGroup), nrow=1, scales = "free_x") + 
+plotColData(sce, x="SampleName", y="detected", colour_by = "low_n_features") + 
     scale_y_log10() + 
     labs(y = "Genes detected", title = "Genes detected") +
     guides(colour=guide_legend(title="Discarded"))
@@ -710,9 +687,7 @@ plotColData(sce,
 plotColData(sce, 
         x="Sample", 
         y="subsets_Mito_percent",
-        other_fields="SampleGroup", 
         colour_by = "high_Mito_percent") + 
-    facet_wrap(vars(SampleGroup), nrow=1, scales = "free_x") + 
     labs(y = "Percentage mitochondrial UMIs",
          title = "Mitochondrial UMIs") +
     guides(colour=guide_legend(title="Discarded"))
@@ -724,30 +699,21 @@ venn diagrams below show how the number of discarded droplets in have changed
 for each filter in comparison to when the MAD filtering was applied across all
 samples.
 
-```{r filtering_venns, fig.width=12, fig.height=8}
-libDat <- tibble(`All together`=cell_qc_results$low_lib_size, 
-                 `By batch`=batch.cell_qc_results$low_lib_size,
-                 Batch=sce$Sample)
-
-pc1 <- libDat %>% 
-    ggvenn(show_percentage = FALSE) +
-        labs(title="Library Size")
-
-nGenDat <- tibble(`All together`=cell_qc_results$low_n_features, 
-                  `By batch`=batch.cell_qc_results$low_n_features,
-                 Batch=sce$DatasetName)
-
-pc2 <- nGenDat %>% 
+```{r filtering_venns, fig.width=12, fig.height=4}
+pc1 <- tibble(`All together`=cell_qc_results$low_lib_size, 
+              `By batch`=batch.cell_qc_results$low_lib_size) %>% 
            ggvenn(show_percentage = FALSE) +
-            labs(title="Genes detected")
+               labs(title="Library Size")
 
-
-mitDat <- tibble(`All together`=cell_qc_results$high_subsets_Mito_percent, 
-       `By batch`=batch.cell_qc_results$high_subsets_Mito_percent,
-                 Batch=sce$DatasetName)
-pc3 <- mitDat %>% 
+pc2 <- tibble(`All together`=cell_qc_results$low_n_features, 
+              `By batch`=batch.cell_qc_results$low_n_features) %>% 
            ggvenn(show_percentage = FALSE) +
-            labs(title="Mitochondrial UMIs")
+               labs(title="Genes detected")
+
+pc3 <- tibble(`All together`=cell_qc_results$high_subsets_Mito_percent, 
+                 `By batch`=batch.cell_qc_results$high_subsets_Mito_percent) %>% 
+           ggvenn(show_percentage = FALSE) +
+               labs(title="Mitochondrial UMIs")
 
 pc1 + pc2 + pc3
 ```
@@ -866,9 +832,9 @@ overlay our final filter metric using the point colour.
 plotColData(sce, 
             x="sum", 
             y="subsets_Mito_percent", 
-            other_fields="Sample",
+            other_fields="SampleName",
             colour_by="discard") +
-    facet_wrap(~Sample, ncol=5, scale="free_x")
+    facet_wrap(~SampleName, ncol=5, scale="free_x")
 ```
 
 # QC and Filtering based on sparsity
@@ -909,14 +875,14 @@ The cell sparsity plot shows that most cells have between 85% and 99% 0's, which
 is typical.
 
 ```{r plot_cell_sparsity_histogram}
-hist(sce$cell_sparsity, breaks=50, col="grey80", xlab="Cell sparsity", main="")
+hist(sce$cell_sparsity, breaks=50, col="grey80", xlab="Cell sparsity")
 ```
 
 The gene sparsity plot shows that a large number of genes are almost never
 detected, which is also regularly observed.
 
 ```{r plot_gene_sparsity_histogram}
-hist(rowData(sce)$gene_sparsity, breaks=50, col="grey80", xlab="Gene sparsity", main="")
+hist(rowData(sce)$gene_sparsity, breaks=50, col="grey80", xlab="Gene sparsity")
 ```
 
 ## Filter by sparsity
