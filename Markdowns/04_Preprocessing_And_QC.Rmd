@@ -242,9 +242,7 @@ boxplot(plot_data, cex=0.1, las=1, xlab="% total count per cell", horizontal=TRU
 ```
 
 ```{r echo=FALSE}
-rm(rel_expression, plot_data)
-ncolRaw <- ncol(sce.sing)
-rm(sce.sing)
+rm(rel_expression, plot_data, sce.sing)
 ```
 
 # Quality control
