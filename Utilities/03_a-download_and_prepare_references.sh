@@ -37,7 +37,7 @@ zcat ${fasta_lcl} |
 
 ## c) Modify gene/treanscript/exon IDs in GTF
 # Remove version suffix from transcript, gene, and exon IDs in order to match
-# previous Cell Ranger reference packages.
+# previous Cell Ranger reference packages. Note that as of v41 the 
 
 ID="(ENS(MUS)?[GTE][0-9]+)\.([0-9]+)"
 gtf_modified="gencode.v41.primary_assembly.annotation.mod_id.gtf.gz"
@@ -59,6 +59,7 @@ TR_V_pseudogene|TR_J_pseudogene)"
 GENE_PATTERN="gene_type \"${BIOTYPE_PATTERN}\""
 TX_PATTERN="transcript_type \"${BIOTYPE_PATTERN}\""
 READTHROUGH_PATTERN="tag \"readthrough_transcript\""
+PAR_PATTERN="tag \"PAR\""
 
 
 # Construct the gene ID allowlist. We filter the list of all transcripts
@@ -66,6 +67,7 @@ READTHROUGH_PATTERN="tag \"readthrough_transcript\""
 #   - allowable gene_type (biotype)
 #   - allowable transcript_type (biotype)
 #   - no "readthrough_transcript" tag
+#   - no "PAR" tag - genes on pseudoautosomal region of Y chromosome
 # We then collect the list of gene IDs that have at least one associated
 # transcript passing the filters.
 zcat ${gtf_modified} \
@@ -73,6 +75,7 @@ zcat ${gtf_modified} \
     | grep -E "$GENE_PATTERN" \
     | grep -E "$TX_PATTERN" \
     | grep -Ev "$READTHROUGH_PATTERN" \
+    | grep -Ev "$PAR_PATTERN" \
     | sed -E 's/.*(gene_id "[^"]+").*/\1/' \
     | sort \
     | uniq \
