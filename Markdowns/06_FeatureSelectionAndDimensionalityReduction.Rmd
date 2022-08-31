@@ -671,7 +671,8 @@ set.seed(123) # set a random seed to ensure reproducibility
 sce <- runTSNE(sce, 
                name = "TSNE_perplex50",
                perplexity = 50, 
-               dimred = "PCA")
+               dimred = "PCA",
+               n_dimred = 10)
 
 # Make a custom visualisation using ggcells
 ggcells(sce, aes(x = TSNE_perplex50.1, y = TSNE_perplex50.2, 
@@ -684,7 +685,8 @@ set.seed(321)
 sce <- runTSNE(sce, 
                name = "TSNE_perplex50_seed321",
                perplexity = 50, 
-               dimred = "PCA")
+               dimred = "PCA",
+               n_dimred = 10)
 
 ggcells(sce, aes(x = TSNE_perplex50_seed321.1, y = TSNE_perplex50_seed321.2, 
                  colour = SampleName)) +
@@ -714,11 +716,13 @@ set.seed(321)
 sce <- runTSNE(sce, 
                name = "TSNE_perplex5",
                perplexity = 5, 
-               dimred = "PCA")
+               dimred = "PCA",
+               n_dimred = 10)
 sce <- runTSNE(sce, 
                name = "TSNE_perplex500",
                perplexity = 500, 
-               dimred = "PCA")
+               dimred = "PCA",
+               n_dimred = 10)
 
 # visualise
 ggcells(sce, aes(x = TSNE_perplex5.1, y = TSNE_perplex5.2, 
@@ -746,8 +750,45 @@ And the code for the advanced exercise:
 
 # Write a "for loop" to automate running the t-SNE with different perplexity values and different seeds. 
 
+# make vectors of perplexity and seed values to test
+perplexities_to_use <- c(5, 50, 500)
+seeds_to_use <- c(1, 2)
+
+for (perplexity in perplexities_to_use){
+  for (seed in seeds_to_use){
+    
+    # make a name for the reduced dimensionality name
+    result_name <- paste0("TSNE_perplex", perplexity, "_seed", seed)
+    
+    # update the object
+    set.seed(seed)
+    sce <- runTSNE(sce, 
+               name = result_name,
+               perplexity = perplexity, 
+               dimred = "PCA",
+               n_dimred = 10)
+  }
+}
 
 # Write a "for loop" to automate plotting all those t-SNE projections, saving the results in a pdf file. 
+
+pdf("Testing_tSNE.pdf")
+for (perplexity in perplexities_to_use){
+  for (seed in seeds_to_use){
+    
+    # make a name for the reduced dimensionality name
+    result_name <- paste0("TSNE_perplex", perplexity, "_seed", seed)
+    
+    # update the object
+    set.seed(seed)
+    sce <- runTSNE(sce, 
+               name = result_name,
+               perplexity = perplexity, 
+               dimred = "PCA",
+               n_dimred = 10)
+  }
+}
+dev.off()
 
 ```
 
