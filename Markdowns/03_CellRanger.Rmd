@@ -102,7 +102,7 @@ real-life scenario you would download the full genome, conventionally named
 `Homo_sapiens.GRCh38.dna.toplevel.fa.gz`). We have also downloaded the GTF file
 with transcript annotation for our genome from the same site.
 
-You can find these reference files in the directory `Data/reference`.
+You can find these reference files in the directory `Data/references`.
 
 To index our genome, we can use the `cellranger mkref` tool with the following
 arguments (replacing `{...}` with the relevant piece of information):
@@ -134,7 +134,7 @@ Open Visual Studio Code and create a shell script named
 `01_prepare_reference.sh` to index the reference genome for Cell Ranger. 
 
 You'll need to give CellRanger the names of the two reference files in 
-`Data/reference`. 
+`Data/references`. 
 
 The output from `mkref` should be named `cellranger_index`.
 
@@ -148,7 +148,7 @@ with the necessary arguments for the `cellranger mkref` command.
 #!/bin/bash
 
 # change to directory with the FASTA and GTF files
-cd Data/reference/
+cd Data/references/
 
 # run mkref
 cellranger mkref\
@@ -169,12 +169,12 @@ The complete script would be:
 #!/bin/bash
 
 # change to directory with the FASTA and GTF files
-cd Data/reference/
+cd Data/references/
 
 # run mkref
 cellranger mkref \
   --fasta=Homo_sapiens.GRCh38.dna.chromosome.21.fa \
-  --genes=Homo_sapiens.GRCh38.104.chr21.gtf \
+  --genes=gencode.v41.primary_assembly.annotation.chr21.gtf \
   --genome=cellranger_index \
   --nthreads=7
 ```
@@ -273,8 +273,10 @@ cellranger count --id={OUTPUT_SAMPLE_NAME} \
 Open Visual Studio Code and create a shell script named `02_cellranger_count.sh`
 to obtain gene counts per cell for one of our samples. Our FASTQ files are named
 with the "SRR9264343" prefix, which corresponds to one of the replicates from a
-"ETV6/RUNX1" cancer subtype. Run `cellranger count` using the fastq files for
-this sample and have Cell Ranger name the output directory "ETV6_RUNX1_rep1".
+"ETV6_RUNX1" cancer subtype, and are located in `Data/fastq`. 
+
+Run `cellranger count` using the fastq files for this sample and have Cell
+Ranger name the output directory "ETV6_RUNX1_rep1".
 
 The start of the script is given here, so you can copy/paste this to a new file
 and work from there.
@@ -299,7 +301,7 @@ Here is a bit more detail about writing the `cellranger count` command:
 ```bash
 cellranger count \
   --id=<<_OUTPUT_SAMPLE_NAME_>> \
-  --transcriptome=Data/reference/cellranger_index \
+  --transcriptome=Data/references/cellranger_index \
   --fastqs=<<_DIRECTORY_WITH_FASTQ_FILES_>> \
   --sample=<<_NAME_OF_SAMPLE_IN_FASTQ_FILES_>> \
   --localcores=8 \
@@ -323,8 +325,8 @@ The complete script would be:
 # run cellranger count (maximum CPUs 8; maximum RAM 24GB)
 cellranger count \
   --id=ETV6_RUNX1_rep1 \
-  --transcriptome=Data/reference/cellranger_index \
-  --fastqs=Data/reads/ \
+  --transcriptome=Data/references/cellranger_index \
+  --fastqs=Data/fastq/ \
   --sample=SRR9264343 \
   --localcores=8 \
   --localmem=24
