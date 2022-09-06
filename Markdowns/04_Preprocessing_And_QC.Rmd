@@ -307,13 +307,11 @@ the filtered counts matrices that we wish to load; the names of the vector will
 be used as the sample names in the Single Cell Experiment object.
 
 ```{r make_file_list}
-list_of_files <- samplesheet %>% 
-    group_by(SampleGroup) %>%  
-    slice(1) %>%  
-    mutate(File=str_c("Data/CellRanger_Outputs/", 
-                       Sample, 
-                       "/outs/filtered_feature_bc_matrix")) %>%
-    pull(File, Sample)
+samples <- samplesheet$Sample[c(1,5,7,9)]
+list_of_files <- str_c("Data/CellRanger_Outputs/", 
+                       samples, 
+                       "/outs/filtered_feature_bc_matrix")
+names(list_of_files) <- samples
 list_of_files
 ```
     
@@ -587,10 +585,11 @@ Having applied each of the three thresholds separately, we can now combine them
 to see how many droplets in total we will be excluding.
 
 ```{r outliers_summary_table}
-data.frame(`Library Size` = sum(low_lib_size),
-           `Genes detected` = sum(low_n_features),
-           `Mitochondrial UMIs` = sum(high_Mito_percent),
-           Total = sum(low_lib_size | low_n_features | high_Mito_percent))
+tibble(low_lib_size, low_n_features, high_Mito_percent) %>%
+  mutate(discard = low_lib_size | low_n_features | high_Mito_percent) %>% 
+  mutate(SampleName=colData(sce)$SampleName) %>% 
+  group_by(SampleName)  %>%
+  summarise(across(where(is.logical), sum))
 ```
 
 ### All three filter steps at once
@@ -605,8 +604,8 @@ cell_qc_results <- quickPerCellQC(colData(sce),
 cell_qc_results %>%
   as.data.frame() %>% 
   mutate(SampleName=colData(sce)$SampleName) %>% 
-  group_by(SampleName)  %>%
-  summarise(across(contains("_"), sum))
+  group_by(SampleName) %>%
+  summarise(across(where(is.logical), sum))
 ```
 
 ### Assumptions
@@ -638,8 +637,8 @@ batch.cell_qc_results <- quickPerCellQC(colData(sce),
 batch.cell_qc_results %>%
   as.data.frame() %>% 
   mutate(SampleName=colData(sce)$SampleName) %>% 
-  group_by(SampleName)  %>%
-  summarise(across(contains("_"), sum))
+  group_by(SampleName) %>%
+  summarise(across(where(is.logical), sum))
 ```
 
 The table below shows how the thresholds for each metric differ between the
@@ -745,7 +744,7 @@ object, some of the QC metrics that we calculated across all genes (for
 filtered data set. We need to remove them, and if necessary recalculate them.
 
 ```{r rerun_per_cell_qc}
-colData(sce.filtered) <- colData(sce.filtered)[,1:3]
+colData(sce.filtered) <- colData(sce.filtered)[,1:5]
 sce.filtered <- addPerCellQC(sce.filtered, BPPARAM = bp.params)
 ```
 
