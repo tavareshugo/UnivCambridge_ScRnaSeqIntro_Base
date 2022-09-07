@@ -1,6 +1,6 @@
 ---
 title: "Introduction to single-cell RNA-seq analysis"
-subtitle: 'Quality Control'
+subtitle: 'Quality Control - Practical'
 output:
   html_document:
     toc: yes
@@ -10,6 +10,12 @@ output:
 ---
 
 ```{r setup, echo=FALSE, include=FALSE, message=FALSE}
+library(DropletUtils)
+library(scater)
+library(ensembldb)
+library(AnnotationHub)
+library(BiocParallel)
+library(tidyverse)
 knitr::opts_chunk$set(error=FALSE, message=FALSE, warning=FALSE, cache=TRUE)
 set.seed(123)
 ```
@@ -29,8 +35,6 @@ library(ensembldb)
 library(AnnotationHub)
 library(BiocParallel)
 library(tidyverse)
-library(patchwork)
-library(ggvenn)
 ```
 
 # Sample meta data
@@ -79,7 +83,7 @@ sample sheet.
 
 
 <details><summary>Answer</summary>
-```{r load_data}
+```{r load_data, purl=FALSE}
 samples_list <- samplesheet$Sample
 list_of_files <- str_c("Data/CellRanger_Outputs/", 
                        samples_list, 
@@ -133,12 +137,11 @@ What proportion of genes have been detected
 
 <details><summary>Answer</summary>
 ```{r percentage_detected}
-detected <- sum(detected_genes)/length(detected_genes)
-detected
+mean(detected_genes)
 ```
 
-Approximately `r round(detected, 3)*100` percent of genes were detected in at
-least one sample.
+Approximately `r round(mean(detected_genes), 3)*100` percent of genes were
+detected in at least one sample.
 </details>
 
 :::
@@ -198,22 +201,25 @@ need to plot the the number of genes detected and percentage of UMIs aligned to
 mitochondrial.
 
 ```{r plot_library_size, eval = FALSE, fig.width=12, fig.height=4}
-plotColData(sce, x="SampleName", y="sum",other_fields="SampleGroup") + 
+plotColData(sce, x="SampleName", y="sum", other_fields="SampleGroup") + 
     facet_wrap(~SampleGroup, nrow=1, scales = "free_x") + 
     scale_y_log10() + 
     ggtitle("Total count")
 ```
 
 <details><summary>Answer</summary>
-```{r plot_detected_genes, eval = FALSE, fig.width=12, fig.height=4}
+```{r plot_detected_genes, eval = FALSE, purl=FALSE, fig.width=12, fig.height=4}
 plotColData(sce, x="SampleName", y="detected", other_fields="SampleGroup") + 
     facet_wrap(~SampleGroup, nrow=1, scales = "free_x") + 
     scale_y_log10() + 
     ggtitle("Detected features")
 ```
 
-```{r plot_MT_content, eval = FALSE, fig.width=12, fig.height=4}
-plotColData(sce, x="SampleName", y="subsets_Mito_percent", other_fields="SampleGroup") + 
+```{r plot_MT_content, eval = FALSE, purl=FALSE, fig.width=12, fig.height=4}
+plotColData(sce, 
+            x="SampleName", 
+            y="subsets_Mito_percent", 
+            other_fields="SampleGroup") + 
     facet_wrap(~SampleGroup, nrow=1, scales = "free_x") +
     ggtitle("Mito percent")
 ```
@@ -221,21 +227,21 @@ plotColData(sce, x="SampleName", y="subsets_Mito_percent", other_fields="SampleG
 
 :::
 
-```{r total_UMI_plot, echo = FALSE, fig.width=12, fig.height=4}
+```{r total_UMI_plot, echo = FALSE, purl=FALSE, fig.width=12, fig.height=4}
 plotColData(sce, x="SampleName", y="sum",other_fields="SampleGroup") + 
     facet_wrap(~SampleGroup, nrow=1, scales = "free_x") + 
     scale_y_log10() + 
     ggtitle("Total count")
 ```
 
-```{r gene_detected_plot, echo = FALSE, fig.width=12, fig.height=4}
+```{r gene_detected_plot, echo = FALSE, purl=FALSE, fig.width=12, fig.height=4}
 plotColData(sce, x="SampleName", y="detected", other_fields="SampleGroup") + 
     facet_wrap(~SampleGroup, nrow=1, scales = "free_x") + 
     scale_y_log10() + 
     ggtitle("Detected features")
 ```
 
-```{r MT_plot, echo = FALSE, fig.width=12, fig.height=4}
+```{r MT_plot, echo = FALSE, fig.width=12, purl=FALSE, fig.height=4}
 plotColData(sce, x="SampleName", y="subsets_Mito_percent", other_fields="SampleGroup") + 
     facet_wrap(~SampleGroup, nrow=1, scales = "free_x") +
     ggtitle("Mito percent")
@@ -270,27 +276,24 @@ two PBMMC_1 samples are quite different - it would appear that PBMMC_1b has a
 lower overall UMI count indicating less sequencing. For this reason it may be
 prudent to apply the adaptive filtering to each sample independently.
 
-```{r quickPerCellQC_batch}
-cell_qc_results <- quickPerCellQC(colData(sce),
+```{r quickPerCellQC_batch, purl=FALSE}
+cell_qc_filters <- quickPerCellQC(colData(sce),
                                 percent_subsets=c("subsets_Mito_percent"),
                                 batch=sce$Sample)
-as.data.frame(cell_qc_results) %>% summarise(across(everything(), sum))
+as.data.frame(cell_qc_filters) %>% summarise(across(everything(), sum))
 ```
 
-In total `r sum(cell_qc_results$discad)` cells will be removed from the
+In total `r sum(cell_qc_filters$discard)` cells will be removed from the
 dataset.
 
 </details>
 
 :::
 
-Let's replace the columns in the droplet annotation with these new filters.
+Let's add the columns in the droplet annotation with these new filters.
 
-```{r quickPerCellQC_batch_replace}
-sce$low_lib_size <- cell_qc_results$low_lib_size
-sce$low_n_features <- cell_qc_results$low_n_features
-sce$high_Mito_percent <- cell_qc_results$high_subsets_Mito_percent
-sce$discard <- cell_qc_results$discard
+```{r quickPerCellQC_batch_add}
+colData(sce) <- cbind(colData(sce), cell_qc_filters)
 ```
 
 We can visualise how the new filters look using violin plots.
@@ -324,7 +327,7 @@ plotColData(sce,
         x="SampleName", 
         y="subsets_Mito_percent",
         other_fields="SampleGroup", 
-        colour_by = "high_Mito_percent") + 
+        colour_by = "high_subsets_Mito_percent") + 
     facet_wrap(vars(SampleGroup), nrow=1, scales = "free_x") + 
     labs(y = "Percentage mitochondrial UMIs",
          title = "Mitochondrial UMIs") +
@@ -333,44 +336,11 @@ plotColData(sce,
 
 # Filtering out poor quality cells
 
-Filter out the poor quality cells, recalculate the cell QC metrics and save the
-filtered object.
+Filter out the poor quality cells.
 
 ```{r rerun_per_cell_QC}
 sce <- sce[, !sce$discard]
-colData(sce) <- colData(sce)[,1:3]
-sce <- addPerCellQC(sce, BPPARAM = bp.params)
 ```
-
-# Filtering genes based on sparsity - Bonus exercise
-
-:::exercise 
-
-So far we have only eliminated genes that are undetected across all samples. In
-reality there will be a large number of genes that are only detected at low
-levels in a small number of cells - much of this will just be due to technical
-noise. We could further filter the genes using "sparsity".
-
-Look at section 8 of the documentation. Filter the data set to remove genes that 
-have only been detected in fewer than 20 cells.
-
-How many additional genes are filtered out?
-
-<details><summary>Answer</summary>
-```{r addPerFeatureQC, eval=TRUE}
-sce <- addPerFeatureQC(sce, BPPARAM = bp.params)
-rowData(sce)$gene_sparsity <- (100 - rowData(sce)$detected) / 100
-max.sparsity <- 1 - (20 / ncol(sce))
-sparse.genes <- rowData(sce)$gene_sparsity > max.sparsity
-sce <- sce[!sparse.genes, ]
-sum(sparse.genes)
-```
-
-An additional `r sum(sparse.genes)` have been filtered out.
-
-</details>
-
-:::
 
 # Session information
 
