@@ -11,6 +11,14 @@ output:
 ```{r setup, echo=FALSE, include=FALSE, message=FALSE}
 library(DT)
 library(knitr)
+library(DropletUtils)
+library(scater)
+library(ensembldb)
+library(AnnotationHub)
+library(BiocParallel)
+library(tidyverse)
+library(patchwork)
+library(ggvenn)
 opts_chunk$set(error=FALSE, message=FALSE, warning=FALSE, cache=TRUE)
 set.seed(123)
 ```
@@ -23,7 +31,7 @@ further filtering of cells to remove poor quality data.
 
 # Load packages
 
-```{r load_packages, message=FALSE}
+```{r load_packages, eval=FALSE}
 library(DropletUtils)
 library(scater)
 library(ensembldb)
@@ -738,16 +746,6 @@ proceeding to do any further analysis.
 sce.filtered <- sce[, !sce$discard]
 ```
 
-**Note**: An important thing to note is that, now that we have filtered this
-object, some of the QC metrics that we calculated across all genes (for
-`colData`) and across all cells (for `rowData`) are no longer correct for the
-filtered data set. We need to remove them, and if necessary recalculate them.
-
-```{r rerun_per_cell_qc}
-colData(sce.filtered) <- colData(sce.filtered)[,1:5]
-sce.filtered <- addPerCellQC(sce.filtered, BPPARAM = bp.params)
-```
-
 # QC and filtering by combining the metrics
 
 In the previous approach we used the three metrics in isolation to filter
@@ -841,84 +839,6 @@ plotColData(sce,
             other_fields="SampleName",
             colour_by="discard") +
     facet_wrap(~SampleName, ncol=5, scale="free_x")
-```
-
-# QC and Filtering based on sparsity
-
-The approach above identified poor-quality using thresholds on the number of
-genes detected and mitochondrial content. We will here specifically look at the
-sparsity of the data, both at the gene and cell levels.
-
-## Sparsity plots
-
-We will compute:
-
-* the cell sparsity: for each cell, the proportion of genes that are not detected
-* the gene sparsity: for each gene, the proportion of cells in which it is not
-detected
-
-To help calculate the gene sparsity we can generate QC metrics for genes with
-`addPerFeatureQC`. This adds two columns to the gene annotation (`rowData`):
-
-* **mean** - the mean UMI count for the gene across all cells  
-* **detected** - the percentage of cells in which the gene was detected
-
-```{r add_per_feature_QC, eval=TRUE}
-sce <- addPerFeatureQC(sce, BPPARAM = bp.params)
-rowData(sce)
-```
-
-Now we can calculate sparsity using the "detected" columns in the `colData` and 
-the `rowData`.
-
-```{r compute_sparsity}
-colData(sce)$cell_sparsity <- 1 - (colData(sce)$detected / nrow(sce))
-rowData(sce)$gene_sparsity <- (100 - rowData(sce)$detected) / 100
-```
-
-We now plot the distribution of these two metrics.
-
-The cell sparsity plot shows that most cells have between 85% and 99% 0's, which
-is typical.
-
-```{r plot_cell_sparsity_histogram}
-hist(sce$cell_sparsity, breaks=50, col="grey80", xlab="Cell sparsity")
-```
-
-The gene sparsity plot shows that a large number of genes are almost never
-detected, which is also regularly observed.
-
-```{r plot_gene_sparsity_histogram}
-hist(rowData(sce)$gene_sparsity, breaks=50, col="grey80", xlab="Gene sparsity")
-```
-
-## Filter by sparsity
-
-We could remove cells with sparsity higher than 0.99, and/or mitochondrial
-content higher than 10%.
-
-Genes detected in a few cells only are unlikely to be informative and would
-hinder normalisation. We will remove genes that are expressed in fewer than 20
-cells.
-
-```{r filter_by_sparsity}
-sparse.cells <- sce$cell_sparsity > 0.99
-mito.cells <- sce$subsets_Mito_percent > 10
-
-min.cells <- 1 - (20 / ncol(sce))
-sparse.genes <- rowData(sce)$gene_sparsity > min.cells
-```
-
-Number of genes removed:
-
-```{r sparsity_gene_filter_results}
-table(sparse.genes)
-```
-
-Number of cells removed:
-
-```{r sparsity_cell_filter_results}
-table(sparse.cells, mito.cells)
 ```
 
 ## Session information

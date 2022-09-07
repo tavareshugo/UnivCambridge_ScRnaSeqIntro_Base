@@ -5,8 +5,6 @@ library(ensembldb)
 library(AnnotationHub)
 library(BiocParallel)
 library(tidyverse)
-library(patchwork)
-library(ggvenn)
 
 # load samplesheet 
 samplesheet <- read_tsv("Data/sample_sheet.tsv")
@@ -253,11 +251,6 @@ pc1 + pc2 + pc3
 # Finally, remove the poor quality cells
 sce.filtered <- sce[, !sce$discard]
 
-
-# Rerun per cell QC 
-colData(sce.filtered) <- colData(sce.filtered)[,1:5]
-sce.filtered <- addPerCellQC(sce.filtered, BPPARAM = bp.params)
-
 ## MT content v library_size 
 
 plotColData(sce, 
@@ -267,8 +260,4 @@ plotColData(sce,
             colour_by="discard") +
     facet_wrap(~SampleName, ncol=5, scale="free_x")
 
-
-# add_per_feature_QC 
-sce <- addPerFeatureQC(sce, BPPARAM = bp.params)
-rowData(sce)
 
