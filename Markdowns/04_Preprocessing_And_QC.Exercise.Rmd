@@ -28,7 +28,7 @@ filtering on all of the samples from the Caron data set.
 
 # Load packages
 
-```{r packages}
+```{r packages, eval=FALSE}
 library(DropletUtils)
 library(scater)
 library(ensembldb)
@@ -174,7 +174,7 @@ rowData(sce)
 Now add the per cell QC metrics to the droplet annotation using the
 function `addPerCellQC`.
 
-```{r addPerCellQC}
+```{r add_per_cell_QC}
 is.mito <- which(rowData(sce)$Chromosome=="MT")
 
 sce <- addPerCellQC(sce, subsets=list(Mito=is.mito), BPPARAM = bp.params)
