@@ -29,9 +29,9 @@ names(list_of_files) <- samplesheet$Sample
 sce <- read10xCounts(list_of_files, col.names=TRUE, BPPARAM = bp.params)
 
 # add meta data 
-row_names <- rownames(colData(sce))
-colData(sce) <- merge(colData(sce), samplesheet, by = "Sample", sort = "FALSE")
-rownames(colData(sce)) <- row_names 
+sce$Barcode <- rownames(colData(sce))
+colData(sce) <- merge(colData(sce), samplesheet, by="Sample", sort=FALSE)
+rownames(colData(sce)) <- sce$Barcode
 
 # Keep only detected genes
 detected_genes <- rowSums(counts(sce)) > 0
@@ -63,13 +63,6 @@ cell_qc_results <- quickPerCellQC(colData(sce),
 
 sce <- sce[, !cell_qc_results$discard]
 
-# fix the per cell metrics
-colData(sce) <- colData(sce)[,1:5]
-sce <- addPerCellQC(sce, BPPARAM = bp.params)
-
-# add per gene metrics
-sce <- addPerFeatureQC(sce, BPPARAM = bp.params)
-
 saveRDS(sce, "data/R_objects/Caron_filtered.full.rds")
 
 # Now sub-sample to 500 cells per sample
@@ -77,25 +70,20 @@ saveRDS(sce, "data/R_objects/Caron_filtered.full.rds")
 set.seed(63278)
 barcodes <- colData(sce) %>%
 	data.frame() %>%
-    rownames_to_column("Cellcode") %>%
 	group_by(SampleName) %>%
 	sample_n(500) %>%
-    pull(Cellcode)	
+    pull(Barcode)	
 
 sce.sub <- sce[,barcodes]
 
 # for each gene in each cell: is it expressed?
-detectedGenes <- rowSums(counts(sce.sub) > 0) > 5
-sce.sub <- sce.sub[detectedGenes,]
+detected_genes <- rowSums(counts(sce)) > 0
+sce.sub <- sce.sub[detected_genes, ]
 
 # update cell QC metrics
-colData(sce.sub) <- colData(sce.sub)[,1:5]
+colData(sce.sub) <- colData(sce.sub)[,1:4]
 is.mito <- rowData(sce.sub)$Chromosome%in%c("chrM", "MT")
 sce.sub <- addPerCellQC(sce.sub, subsets=list(Mito=is.mito), BPPARAM = bp.params)
-
-# update gene QC metrics
-rowData(sce.sub) <- rowData(sce.sub)[,1:4]
-sce.sub <- addPerFeatureQC(sce.sub, BPPARAM = bp.params)
 
 # Write object to file
 saveRDS(sce.sub, "data/R_objects/Caron_filtered.500.rds")
