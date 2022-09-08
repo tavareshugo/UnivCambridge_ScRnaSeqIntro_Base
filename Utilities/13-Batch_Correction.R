@@ -19,7 +19,7 @@ library(stringr)
 sce <- readRDS("data/R_objects/Caron_dimRed.500.rds")
 sce <- sce[,sce$SampleGroup%in%c("ETV6-RUNX1", "PBMMC")]
 
-merge_order <- list(list(c("PBMMC_1a", "PBMMC_1b"), "PBMMC_2", "PBMMC_3"),
+merge_order <- list(list("PBMMC_1", "PBMMC_2", "PBMMC_3"),
                     list("ETV6-RUNX1_1","ETV6-RUNX1_2",
                          "ETV6-RUNX1_3", "ETV6-RUNX1_4"))
 set.seed(123)
