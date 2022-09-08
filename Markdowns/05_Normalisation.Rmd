@@ -12,6 +12,13 @@ output:
 
 ```{r setup, echo=FALSE, message=FALSE}
 library(knitr)
+library(scater)
+library(scran)
+library(sctransform)
+library(tidyverse)
+library(BiocParallel)
+
+bpp <- MulticoreParam(7)
 opts_chunk$set(error=FALSE, message=FALSE, warning=FALSE, cache=TRUE)
 set.seed(123)
 ```
@@ -38,7 +45,7 @@ between cells. Normalisation and batch correction have different aims.
 Normalisation addresses technical differences only, while batch correction
 considers both technical and biological differences.
 
-```{r load_packages, message=FALSE}
+```{r load_packages, eval=FALSE}
 library(scater)
 library(scran)
 library(sctransform)
@@ -236,7 +243,7 @@ assayNames(sce)
 ## Save the normalised object
 
 ```{r save_normalised, eval=FALSE}
-saveRDS(sce, "Robjects/caron_normalied.rds")
+saveRDS(sce, "results/caron_normalised.rds")
 ```
 
 ## Exercise 1
@@ -554,7 +561,7 @@ assay(sce, "sctrans_norm", withDimnames=FALSE) <- vstMat
 ## Exercise 2
 
 Exercise: apply the sctransform VST normalisation on a single sample:
-ETV6-RUNX1_1a (aka SRR9264343).
+ETV6-RUNX1_1 (aka SRR9264343).
 
 In exercise 1, you made a new SCE object with cells for SampleName
 'ETV6-RUNX1_1'. You will now inspect the mean-variance relationship and apply
