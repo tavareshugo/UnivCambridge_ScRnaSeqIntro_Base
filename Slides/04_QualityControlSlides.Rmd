@@ -108,38 +108,39 @@ http://bioconductor.org/books/release/OSCA/
 
 ## The _SingleCellExperiment_ object
 
-```{r echo=FALSE, out.width='80%', fig.align='center'}
-knitr::include_graphics('Images/sce_object_2.png')
-```
+<div style="width: 75%; float: top; padding-left: 10%">
+<img src="Images/sce_object_2.png" class="centerimg" style="width: 100%">
+</div>
+
 
 ## The Counts Matrix
 
-<div style="width: 75%; float: top; padding-left: 10%; padding-top: 10%">
-<img src="Images/sce_object_counts_matrix.png" class="centerimg" style="width: 75%">
+<div style="width: 75%; float: top; padding-left: 10%">
+<img src="Images/sce_object_counts_matrix.png" class="centerimg" style="width: 100%">
 </div>
 
 <div style="width: 80%; float: left;">
- To access counts from sce object: __counts(sce)__
+ To access counts from sce object: __`counts(sce)`__ 
 </div>
 
 ## Feature metadata
 
-<div style="width: 75%; float: top; padding-left: 10%; padding-top: 10%">
-<img src="Images/sce_object_feature_metadata.png" class="centerimg" style="width: 75%">
+<div style="width: 75%; float: top; padding-left: 10%">
+<img src="Images/sce_object_feature_metadata.png" class="centerimg" style="width: 100%">
 </div>
 
 <div style="width: 80%; float: left;">
- To access gene metadata from sce object: __rowData(sce)__
+ To access gene metadata from sce object: __`rowData(sce)`__
 </div>
 
 ## Droplet annotation (Cell metadata)
 
-<div style="width: 75%; float: top; padding-left: 10%; padding-top: 10%">
-<img src="Images/sce_object_cell_metadata.png" class="centerimg" style="width: 75%">
+<div style="width: 75%; float: top; padding-left: 10%">
+<img src="Images/sce_object_cell_metadata.png" class="centerimg" style="width: 100%">
 </div>
 
 <div style="width: 80%; float: left;">
- To access cell metadata from sce object: __colData(sce)__
+ To access cell metadata from sce object: __`colData(sce)`__
 </div>
 
 ## Properties of RNAseq data - Total UMIs 
