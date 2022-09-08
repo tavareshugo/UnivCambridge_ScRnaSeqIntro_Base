@@ -143,6 +143,7 @@ object with just 500 cells per sample - this can be used in the demo sessions
 during the course.
 
 ```
+mkdir data/R_objects
 sbatch 09-QC_and_Filtering.R
 ```
 --> data/R_objects/Caron_filtered.500.rds
