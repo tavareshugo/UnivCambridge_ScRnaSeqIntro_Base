@@ -1,8 +1,7 @@
 ---
 title: Introduction to single-cell RNA-seq analysis
 subtitle: Quality Control
-author: "Chandra Chilamakuri and Ashley Sawle"
-date: '15th June 2022'
+date: '12th September 2022'
 output:
   ioslides_presentation:
     widescreen: true
