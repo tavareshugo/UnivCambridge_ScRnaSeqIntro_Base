@@ -270,11 +270,10 @@ HHD, PBMMC, PRE-T), or we could apply it per sample.
 
 
 <details><summary>Answer</summary>
-It is clear that there are significantly different distribution profiles
-between samples in the same group. Noticeably the distribution profiles for the
-two PBMMC_1 samples are quite different - it would appear that PBMMC_1b has a
-lower overall UMI count indicating less sequencing. For this reason it may be
-prudent to apply the adaptive filtering to each sample independently.
+It is clear that there are significantly different distribution profiles between
+samples in the same group. Noticeably the distribution profiles for the two HDD
+samples are quite different. For this reason it may be prudent to apply the
+adaptive filtering to each sample independently.
 
 ```{r quickPerCellQC_batch, purl=FALSE}
 cell_qc_filters <- quickPerCellQC(colData(sce),

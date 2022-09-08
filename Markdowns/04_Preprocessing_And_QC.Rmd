@@ -64,13 +64,8 @@ samplesheet <- read_tsv("Data/sample_sheet.tsv")
 ```{r metadata, echo=FALSE}
 samplesheet %>%
 	as.data.frame() %>%
-	datatable(rownames = FALSE, options = list(dom="tpl", nrows=20))
+	datatable(rownames = FALSE, options = list(dom="t", pageLength=11))
 ```
-
-**NOTE**: There are two PBMMC_1 samples. These are two libraries from the same
-sample material. Later on, we will combine these to form a single sample, but 
-for the purposes of quality assessment we will need to treat them as separate
-samples.
 
 ### Parallelisation
 
@@ -367,7 +362,7 @@ detected_genes <- rowSums(counts(sce)) > 0
 table(detected_genes)
 ```
 
-About a sixth of the genes have not been detected in any droplet. We can
+About a fifth of the genes have not been detected in any droplet. We can
 remove these before proceeding in order to reduce the size of the single cell
 experiment object.
 
@@ -759,7 +754,7 @@ exclude many good quality cells. To demonstrate these methods, we'll just
 extract one sample from our SingleCellExperiment object.
 
 ```{r subset_PBMMC}
-sce.BM1 <- sce[ , sce$SampleName == "PBMMC_1a"]
+sce.E1 <- sce[ , sce$SampleName == "ETV6-RUNX1_1"]
 ```
 
 ## Using "outlyingness"
@@ -776,9 +771,9 @@ value.
 
 ```{r outlyingness_filter}
 library(robustbase)
-stats <- cbind(log10(sce.BM1$sum),
-               log10(sce.BM1$detected),
-               sce.BM1$subsets_Mito_percent)
+stats <- cbind(log10(sce.E1$sum),
+               log10(sce.E1$detected),
+               sce.E1$subsets_Mito_percent)
 
 outlying <- adjOutlyingness(stats, only.outlyingness = TRUE)
 multi.outlier <- isOutlier(outlying, type = "higher")
@@ -794,9 +789,9 @@ the PCA and detect outliers. We'll need to add a couple of columns to the
 `colData` for the log10 metrics first.
 
 ```{r PCA_filter}
-sce.BM1$log10sum <- log10(sce.BM1$sum)
-sce.BM1$log10detected <- log10(sce.BM1$detected)
-sce.BM1 <- runColDataPCA(sce.BM1, 
+sce.E1$log10sum <- log10(sce.E1$sum)
+sce.E1$log10detected <- log10(sce.E1$detected)
+sce.E1 <- runColDataPCA(sce.E1, 
                      variables=list("log10sum", 
                                     "log10detected", 
                                     "subsets_Mito_percent"),
@@ -810,14 +805,14 @@ dimension reduction transformations such as PCA, t-SNE and UMAP. The results
 can be accessed using the `reducedDim` function.
 
 ```{r pca_results}
-head(reducedDim(sce.BM1))
+head(reducedDim(sce.E1))
 ```
 
 It has also added a column "outlier" to the `colData`, which specifies the 
 droplets that have been identified as outliers.
 
 ```{r outlyingness_results}
-summary(sce.BM1$outlier)
+summary(sce.E1$outlier)
 ```
 
 ## A note on multi-dimensional filtering
