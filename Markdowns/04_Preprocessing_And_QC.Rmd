@@ -602,8 +602,8 @@ This creates a DataFrame with 4 columns containing TRUE/FALSE - one for each
 filter metric and one called "discard" that combined the three logicals.
 
 ```{r quickPerCellQC}
-cell_qc_results <- quickPerCellQC(colData(sce),
-			  percent_subsets=c("subsets_Mito_percent"))
+cell_qc_results <- quickPerCellQC(colData(sce), sub.fields = TRUE)
+
 cell_qc_results %>%
   as.data.frame() %>% 
   mutate(SampleName=colData(sce)$SampleName) %>% 
@@ -633,9 +633,9 @@ that allows us to specify with samples belong to which batches. The batches are
 then filtered independently.
 
 ```{r quickPerCellQC_batch}
-batch.cell_qc_results <- quickPerCellQC(colData(sce),
-                                percent_subsets=c("subsets_Mito_percent"),
-                                batch=sce$Sample)
+batch.cell_qc_results2 <- quickPerCellQC(colData(sce), 
+                                         sub.fields = TRUE,
+                                         batch=sce$Sample)
 
 batch.cell_qc_results %>%
   as.data.frame() %>% 

@@ -5,12 +5,10 @@ library(ensembldb)
 library(AnnotationHub)
 library(BiocParallel)
 library(tidyverse)
+library(ggvenn)
 
 # load samplesheet 
 samplesheet <- read_tsv("Data/sample_sheet.tsv")
-
-# view metadata 
-samplesheet
 
 # set up parallelisation 
 bp.params <- MulticoreParam(workers = 7)
@@ -118,13 +116,6 @@ plotColData(sce, x="SampleName", y="subsets_Mito_percent") +
 # Libary size filtering 
 low_lib_size <- isOutlier(sce$sum, log=TRUE, type="lower")
 
-colData(sce)$low_lib_size <- low_lib_size
-plotColData(sce, x="SampleName", y="sum", colour_by = "low_lib_size") + 
-    scale_y_log10() + 
-    labs(y = "Total count", title = "Total count") +
-    guides(colour=guide_legend(title="Discarded"))
-
-
 # Detected genes 
 low_n_features <- isOutlier(sce$detected, log=TRUE, type="lower")
 
@@ -159,8 +150,8 @@ tibble(low_lib_size, low_n_features, high_Mito_percent) %>%
 
 ## All three filters at once - `quickPerCellQC`
 
-cell_qc_results <- quickPerCellQC(colData(sce),
-                                  percent_subsets=c("subsets_Mito_percent"))
+cell_qc_results <- quickPerCellQC(colData(sce), sub.fields = TRUE)
+
 cell_qc_results %>%
   as.data.frame() %>% 
   mutate(SampleName=colData(sce)$SampleName) %>% 
@@ -170,9 +161,9 @@ cell_qc_results %>%
 
 # Separate thresholds for each sample
 
-batch.cell_qc_results <- quickPerCellQC(colData(sce),
-                                percent_subsets=c("subsets_Mito_percent"),
-                                batch=sce$Sample)
+batch.cell_qc_results2 <- quickPerCellQC(colData(sce), 
+                                         sub.fields = TRUE,
+                                         batch=sce$Sample)
 
 batch.cell_qc_results %>%
   as.data.frame() %>% 
@@ -227,26 +218,6 @@ plotColData(sce,
     labs(y = "Percentage mitochondrial UMIs",
          title = "Mitochondrial UMIs") +
     guides(colour=guide_legend(title="Discarded"))
-
-
-# filtering_venns 
-pc1 <- tibble(`All together`=cell_qc_results$low_lib_size, 
-              `By batch`=batch.cell_qc_results$low_lib_size) %>% 
-           ggvenn(show_percentage = TRUE) +
-               labs(title="Library Size")
-
-pc2 <- tibble(`All together`=cell_qc_results$low_n_features, 
-              `By batch`=batch.cell_qc_results$low_n_features) %>% 
-           ggvenn(show_percentage = TRUE) +
-               labs(title="Genes detected")
-
-pc3 <- tibble(`All together`=cell_qc_results$high_subsets_Mito_percent, 
-                 `By batch`=batch.cell_qc_results$high_subsets_Mito_percent) %>% 
-           ggvenn(show_percentage = TRUE) +
-               labs(title="Mitochondrial UMIs")
-
-pc1 + pc2 + pc3
-
 
 # Finally, remove the poor quality cells
 sce.filtered <- sce[, !sce$discard]

@@ -277,8 +277,9 @@ adaptive filtering to each sample independently.
 
 ```{r quickPerCellQC_batch, purl=FALSE}
 cell_qc_filters <- quickPerCellQC(colData(sce),
-                                percent_subsets=c("subsets_Mito_percent"),
-                                batch=sce$Sample)
+                                  sub.fields = TRUE,
+                                  batch=sce$Sample)
+
 as.data.frame(cell_qc_filters) %>% summarise(across(everything(), sum))
 ```
 
