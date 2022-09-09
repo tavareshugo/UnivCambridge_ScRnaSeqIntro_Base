@@ -633,7 +633,7 @@ that allows us to specify with samples belong to which batches. The batches are
 then filtered independently.
 
 ```{r quickPerCellQC_batch}
-batch.cell_qc_results2 <- quickPerCellQC(colData(sce), 
+batch.cell_qc_results <- quickPerCellQC(colData(sce), 
                                          sub.fields = TRUE,
                                          batch=sce$Sample)
 

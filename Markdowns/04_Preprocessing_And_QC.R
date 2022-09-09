@@ -161,7 +161,7 @@ cell_qc_results %>%
 
 # Separate thresholds for each sample
 
-batch.cell_qc_results2 <- quickPerCellQC(colData(sce), 
+batch.cell_qc_results <- quickPerCellQC(colData(sce), 
                                          sub.fields = TRUE,
                                          batch=sce$Sample)
 
