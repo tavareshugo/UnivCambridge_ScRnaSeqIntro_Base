@@ -10,7 +10,7 @@ output:
 
 # Normalisation
 
-```{r setup, echo=FALSE, message=FALSE}
+```{r setup, echo=FALSE, message=FALSE, warning=FALSE}
 library(knitr)
 library(scater)
 library(scran)
@@ -143,14 +143,14 @@ Advantage: normalised counts are on the same scale as the initial counts.
 
 Compute size factors:
 
-```{r librarySizeFactors}
+```{r library_size_factors}
 lib.sf <- librarySizeFactors(sce)
 summary(lib.sf)
 ```
 
 Size factor distribution: wide range, typical of scRNA-seq data.
 
-```{r librarySizeFactors_hist}
+```{r library_size_factors_hist}
 data.frame("log10libSf"=log10(lib.sf)) %>% 
   ggplot(aes(x=log10libSf)) + 
     geom_histogram(bins=50)
@@ -197,7 +197,7 @@ each cluster and are then scaled so they are comparable across clusters.
 
 The table below show the number and size of clusters found:
 
-```{r quickCluster}
+```{r quick_cluster}
 set.seed(100)
 clust <- quickCluster(sce, BPPARAM=bpp)
 table(clust)
@@ -205,7 +205,7 @@ table(clust)
 
 ### Compute size factors
 
-```{r calculateSumFactors}
+```{r calculate_sum_factors}
 sce <- computePooledFactors(sce,
 			 clusters = clust,
 			 min.mean = 0.1,
@@ -220,7 +220,7 @@ large numbers of very lowly expressed genes will not bias the normalization.
 
 Plot deconvolution size factors against library size factors:
 
-```{r deconv_v_librarySize}
+```{r deconvolution_norm_v_library_size}
 data.frame(LibrarySizeFactors = lib.sf, 
            DeconvolutionSizeFactors = deconv.sf,
 			     SampleGroup = sce$SampleGroup) %>%
@@ -235,7 +235,7 @@ For each cell, raw counts for genes are divided by the size factor for that cell
 and log-transformed so downstream analyses focus on genes with strong relative
 differences. We use `scater::logNormCounts()`.
 
-```{r logNormCounts}
+```{r log_norm_counts}
 sce <- logNormCounts(sce)
 assayNames(sce)
 ```
@@ -465,7 +465,7 @@ plot_model_pars(vst_out, verbosity = 1)
 
 We check the regression model used is the one the we intended:
 
-```{r model_show_sct_Caron_5hCellPerSpl}
+```{r show_sctransform_model}
 vst_out$model_str
 ```
 
@@ -522,7 +522,7 @@ ggplot(vst_out$gene_attr, aes(residual_variance)) +
 Plotting the residual variance against the mean shows that after transformation
 there is no relationship between gene mean and variance.
 
-```{r resVar_mean}
+```{r residual_variance_v_mean_plot}
 ggplot(vst_out$gene_attr, aes(x = log10(gmean), y = residual_variance)) +
        geom_point(alpha=0.3, shape=16)
 ```
@@ -548,11 +548,13 @@ add them as a new "assay". The transformed values are kept as a matrix in the
 Note that, by default, genes that are expressed in fewer than 5 cells are not
 used by `vst` and results for these genes are not returned, so to add
 `vst_out$y` as an assay in our single cell object we may need to subset the rows
-of our `sce` object to match the rows of `vst_out$y`. In our case, none of the
-genes in our data set were detected in less than 6 cells, so the `vst$y` matrix
-matches our original data row for row.
+of our `sce` object to match the rows of `vst_out$y`. In our case, about 10,000
+genes were expressed in less than 5 cells, so we will need to subset our SCE 
+object before adding the VST normalised counts.
 
 ```{r add_vst_to_sce}
+keepGenes <- rownames(sce)%in%rownames(vst_out$y)
+sce <- sce[keepGenes,]
 vstMat <- as(vst_out$y[rownames(sce),], "dgCMatrix")
 
 assay(sce, "sctrans_norm", withDimnames=FALSE) <- vstMat
