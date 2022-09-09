@@ -35,7 +35,7 @@ bp.params <- MulticoreParam(workers = 7)
 # command.
 
 
-
+# PUT YOUR CODE HERE
 
 
 
@@ -66,6 +66,10 @@ sce <- sce[detected_genes,]
 ## -- Exercise 2 -- ############################################################
 
 # What proportion of the genes have been detected in at least 1 cell?
+
+
+# PUT YOUR CODE HERE
+
 
 ################################################################################
 
@@ -119,7 +123,14 @@ plotColData(sce, x="SampleName", y="sum", other_fields="SampleGroup") +
 
 # Number of detected genes plot
 
+
+# PUT YOUR CODE HERE
+
+
 # Percentage of MT UMIs plot
+
+
+# PUT YOUR CODE HERE
 
 
 ################################################################################
@@ -136,8 +147,14 @@ plotColData(sce, x="SampleName", y="sum", other_fields="SampleGroup") +
 # applied.
 
 
+# PUT YOUR CODE HERE
+
 
 # How many cells will be removed from the data set?
+
+
+# PUT YOUR CODE HERE
+
 
 ################################################################################
  

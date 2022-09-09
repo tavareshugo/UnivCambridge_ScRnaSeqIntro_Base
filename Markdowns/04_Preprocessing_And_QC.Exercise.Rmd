@@ -83,7 +83,7 @@ sample sheet.
 
 
 <details><summary>Answer</summary>
-```{r load_data, purl=FALSE}
+```{r load_data_answer, purl=FALSE}
 samples_list <- samplesheet$Sample
 list_of_files <- str_c("Data/CellRanger_Outputs/", 
                        samples_list, 
@@ -136,7 +136,7 @@ sce <- sce[detected_genes,]
 What proportion of genes have been detected
 
 <details><summary>Answer</summary>
-```{r percentage_detected}
+```{r percentage_detected_answer}
 mean(detected_genes)
 ```
 
@@ -208,14 +208,14 @@ plotColData(sce, x="SampleName", y="sum", other_fields="SampleGroup") +
 ```
 
 <details><summary>Answer</summary>
-```{r plot_detected_genes, eval = FALSE, purl=FALSE, fig.width=12, fig.height=4}
+```{r plot_detected_genes_answer, eval = FALSE, purl=FALSE, fig.width=12, fig.height=4}
 plotColData(sce, x="SampleName", y="detected", other_fields="SampleGroup") + 
     facet_wrap(~SampleGroup, nrow=1, scales = "free_x") + 
     scale_y_log10() + 
     ggtitle("Detected features")
 ```
 
-```{r plot_MT_content, eval = FALSE, purl=FALSE, fig.width=12, fig.height=4}
+```{r plot_MT_content_answer, eval = FALSE, purl=FALSE, fig.width=12, fig.height=4}
 plotColData(sce, 
             x="SampleName", 
             y="subsets_Mito_percent", 
