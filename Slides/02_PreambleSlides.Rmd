@@ -1,7 +1,6 @@
 ---
 title: "Introduction to single-cell RNA-seq analysis - Data sets and analyses"
-author: "Stephane Ballereau"
-date: "Feb 2022"
+date: "September 2022"
 output:
   ioslides_presentation:
     widescreen: true
@@ -23,10 +22,6 @@ output:
   * **Aim**: characterise the heterogeneity of gene expression at the cell level, within and between patients
   * **cells**: Bone Marrow Mononuclear cells (BMMCs)
 
-* Adult bone marrow
-
-  * ['HCA': adult BMMCs](https://data.humancellatlas.org/explore/projects/cc95ff89-2e68-4a08-a234-480eca21ce79) (ABMMCs) obtained from the Human Cell Atlas (HCA)
-
 ## Samples
 
 Five types of sample are considered:
@@ -38,7 +33,6 @@ Five types of sample are considered:
   * **'PRE-T'**, two patients
 * Healthy controls,
   * **Healthy pediatric controls**, three individuals
-  * **Healthy adult controls**, eight individuals (HCA)
 
 As the study aims at identifying cell populations, large numbers of cells were sequenced with the droplet-based 10x Chromium assay.
 
