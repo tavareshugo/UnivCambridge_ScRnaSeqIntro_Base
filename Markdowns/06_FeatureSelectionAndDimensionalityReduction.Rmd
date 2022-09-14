@@ -11,6 +11,11 @@ subtitle: Feature Selection and Dimensionality Reduction
 ---
 
 ```{r setup, echo=FALSE, include=FALSE, message=FALSE, purl=FALSE}
+library(scater) 
+library(scran)
+library(PCAtools)
+library(tidyverse)
+
 knitr::opts_chunk$set(error=FALSE, 
                       message=FALSE, 
                       warning=FALSE, 
@@ -32,7 +37,7 @@ our analysis with potentially "noisy" data.
 
 Before we start, let's load our packages and read our data in. 
 
-```{r load_packages, results='hide', message=FALSE, warning=FALSE}
+```{r load_packages, eval=FALSE}
 library(scater) 
 library(scran)
 library(PCAtools)
