@@ -165,7 +165,7 @@ size of the log fold change measured between clusters, but less so the
 clustering itself. It is thus sufficient to identify clusters and top marker 
 genes.
 
-## Deconvolution
+## Normalisation by deconvolution
 
 Composition bias occurs when differential expression between two samples or here
 cells is not balanced. For a fixed library size, identical in both cells,
@@ -255,7 +255,7 @@ You first load the same object we loaded earlier, then select cells for
 SampleName 'ETV6-RUNX1_1'. You will then cluster cells, compute and apply size
 factors.
 
-# sctransform: Variant Stabilising Transformation
+# Normalisation with variance stabilising transformation
 
 With scaling normalisation a correlation remains between the mean and variation
 of expression (heteroskedasticity). This affects downstream dimensionality
@@ -428,7 +428,7 @@ arguments:
 ```{r sctransform_vst, eval=FALSE}
 set.seed(44)
 vst_out <- vst(umi = counts,
-               latent_var = c('log_umi'),
+               latent_var = 'log_umi',
                return_gene_attr = TRUE,
                return_cell_attr = TRUE
   )
@@ -469,8 +469,8 @@ We check the regression model used is the one the we intended:
 vst_out$model_str
 ```
 
-We will now look at several genes in more detail by plotting observed UMI counts
-and comparing these to plots using the residuals from the modelling.
+We will now look at a couple of genes in more detail by plotting observed UMI
+counts and comparing these to plots using the residuals from the modelling.
 
 For each gene of interest, we will plot:
 
