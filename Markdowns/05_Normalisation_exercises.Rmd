@@ -1,344 +1,297 @@
 ---
 title: "Introduction to single-cell RNA-seq analysis"
-subtitle: 'Normalisation - GSM3872434 sample'
-
-author: "Stephane Ballereau"
+subtitle: 'Normalisation Practical'
 output:
   html_document:
-    df_print: paged
     toc: yes
     number_sections: true
-    code_folding: show
-  html_notebook:
-    code_folding: hide
-    toc: yes
-    toc_float: yes
-    number_sections: true
-  html_book:
-    code_folding: hide
+    code_folding: show 
+    css: ../css/boxes.css
 ---
 
-# Normalisation - Exercises
+# Normalisation Practical
 
-Exercise: apply the deconvolution and SCTransform normalisations methods on a
-single sample: ETV6-RUNX1_1 (aka GSM3872434).
+In the demonstration we ran the normalisation using just 500 cells per sample.
+For this practical you will carry out normalisation, but this time using the 
+entire data set. Some of the commands will take a little longer to run this 
+time.
 
-```{r norm_Caron.knitr_options, echo=FALSE, results="hide", message=FALSE}
-require(knitr)
-# set working directory# set working directory# set working directory
-knitr::opts_knit$set(root.dir = '/home/ubuntu/Course_Materials/Exercises')
-# set other chunk variables
-opts_chunk$set(error=FALSE, message=FALSE, warning=FALSE, eval=FALSE)
-opts_chunk$set(fig.width=7, fig.height=7)
-set.seed(123) # for reproducibility
+```{r setup, echo=FALSE, message=FALSE, warning=FALSE, purl=FALSE}
+library(knitr)
+library(scater)
+library(scran)
+library(sctransform)
+library(tidyverse)
+library(BiocParallel)
+
+bpp <- MulticoreParam(7)
+opts_chunk$set(error=FALSE, message=FALSE, warning=FALSE, cache=TRUE)
+set.seed(123)
 ```
 
-```{r libraries_norm_GSM3872434_allCells, results='hide', message=FALSE, warning=FALSE}
+```{r load_packages, eval=FALSE}
 library(scater)
 library(scran)
 library(tidyverse)
-library(BiocSingular)
 library(BiocParallel)
 
 bpp <- MulticoreParam(7)
 ```
 
-## Load object
+## Prepare the data object
 
-```{r GSM3872434_readIn}
-# Read object in:
-# remember getwd() and dir()
-sce <- readRDS("../Robjects/Caron_filtered.rds")
-colData(sce)$SampleName <- colData(sce)$Sample
+First we will load the full filtered data set. This data was previously filtered
+to remove poor quality cells.
+
+```{r load_data}
+sce <- readRDS("R_objects/Caron_filtered.full.rds")
 ```
 
-Select cells for ETV6-RUNX1_1:
+Now we need to extract just the cells for ETV6_RUNX_1.
 
-```{r GSM3872434_downsample}
-# have new list of cell barcodes for each sample
-sce.master <- sce
-vec.bc <- colData(sce.master) %>%
-	data.frame() %>%
-	filter(SampleName == "ETV6-RUNX1_1") %>%
-	group_by(SampleName) %>%
-	pull(Barcode)
+```{r subset_data}
+etvr1 <- which(sce$SampleName=="ETV6-RUNX1_1")
+sce <- sce[, etvr1]
 ```
 
-Number of cells in the sample:
+:::exercise 
 
-```{r GSM3872434_barcodes}
-table(colData(sce.master)$Barcode %in% vec.bc)
+Now that we have reduced the number of cells in the data set, it may be that
+there are genes in the object that have not been detected in any of the 
+remaining cells. Filter the object to remove any genes that have not been 
+detected.
+
+<details><summary>Hint</summary>
+
+Any gene that has not been detected will have total UMI count across all cells
+of zero. You can use `rowSums` on the `counts` matrix of the single cell object
+to determine the total counts for each each gene. Then keep only rows with total
+counts greater than 0.
+
+</details>
+
+<details><summary>Answer</summary>
+
+```{r exercise_1_answer, purl=FALSE}
+detected_genes <- rowSums(counts(sce)) > 0
+sce <- sce[detected_genes,]
 ```
 
-Subset cells from the SCE object:
+</details>
 
-```{r GSM3872434_subset_sce}
-tmpInd <- which(colData(sce.master)$Barcode %in% vec.bc)
-sce <- sce.master[,tmpInd]
+Q1. How many cells and genes are there in the ETV6_RUNX1_1 data set?
+
+<details><summary>Answer</summary>
+
+```{r exercise_1_Q1_answer_B, purl=FALSE}
+dim(sce)
+```
+
+or
+
+```{r exercise_1_Q1_answer_C, purl=FALSE}
 sce
 ```
 
-Check columns data:
 
-```{r GSM3872434_SampleName_table}
-head(colData(sce))
-table(colData(sce)$SampleName)
+There are `r ncol(sce)` cells remaining and `r nrow(sce)` genes detected.
+
+</details>
+
+Q2. In how many cells has the gene ORC1 been detected with at least 1 UMI?
+
+<details><summary>Hint</summary>
+
+You will need to search the `rowData` of the single cell experiment 
+object to determine which row of the `counts` matrix contains the data for the
+gene ORC1. 
+
+You can either use the row name (in this case the Ensembl ID) or the row number
+to retrieve the counts for ORC1 from the counts matrix. You can then determine
+how many of these are greater than 0.
+
+</details>
+
+<details><summary>Answer</summary>
+
+```{r exercise_1_Q2, purl=FALSE}
+orc1_row <- which(rowData(sce)$Symbol == "ORC1")
+sum(counts(sce)[orc1_row, ] > 0)
 ```
 
-<!--
-# mind that genes were filtered using all cells, not just those sampled here.
--->
+</details>
 
-## Exercise 1 : Deconvolution
+:::
 
-Cluster cells then normalise.
+## Normalisation by deconvolution
+
+:::exercise 
+
+Now normalise the data set using the deconvolution method. You will need to
+
+1. cluster the cells - remember to set a seed so that your results are
+reproducible
+2. compute size factors using the deconvolution method  
+3. log normalize the counts by applying the size factors  
+4. check that the single cell experiment object contains a new "logcounts" assay
+
+<details><summary>Hint</summary>
+
+These are the commands you will need to use for each step:
+
+1. cluster the cells: `quickCluster`
+2. compute size factors: `computePooledFactors`
+3. log normalize the counts: `logNormCounts`
+4. check assay: `assayNames`
+
+</details>
+
+<details><summary>Answer</summary>
 
 ### Cluster cells
 
-```{r comp_quickClus_norm_GSM3872434_allCells}
-set.seed(100) # clusters with PCA from irlba with approximation
-clust <- quickCluster(sce) # slow with all cells.
-table(clust)
+```{r exercise_2_cluster_cells_answer, purl=FALSE}
+set.seed(100) 
+clust <- quickCluster(sce, BPPARAM = bpp)
 ```
 
 ### Compute size factors
 
-```{r calculateSumFactors_norm_GSM3872434_allCells}
-# deconvolve
-
-
-# set size factors
-
-
-# size factors distribution summary
-
-
-```
-
-Plot deconvolution size factors against library size factors:
-
-```{r scatter_deconvSf_libSf_prep_norm_GSM3872434_allCells}
-# compute library size factors
-
-
-# make data frame keeping library and deconvolution size factors for plotting
-
-
-```
-
-```{r scatter_deconvSf_libSf_colBy_more_norm_GSM3872434_allCells}
-# plot deconv.sf against lib.sf
-
-# colour by library size
-
-
+```{r  exercise_2_compute_size_factors_answer, purl=FALSE}
+sce <- computePooledFactors(sce,
+			 clusters = clust,
+			 min.mean = 0.1,
+			 BPPARAM = bpp)
 ```
 
 ### Apply size factors
 
-<!--
-For each cell, raw counts for genes are divided by the size factor for that cell
-and log-transformed so downstream analyses focus on genes with strong relative
-differences. We use `scater::logNormCounts()`.
--->
-
-```{r logNormCounts_norm_GSM3872434_allCells}
-
-
+```{r  exercise_2_log_normalise_answer, purl=FALSE}
+sce <- logNormCounts(sce)
 ```
 
-## Exercise 2 : sctransform
+### Check assays
 
-<!--
-With scaling normalisation a correlation remains between the mean and variation
-of expression (heteroskedasticity). This affects downstream dimensionality
-reduction as the few main new dimensions are usually correlated with library
-size. SCTransform addresses the issue by regressing library size out of raw
-counts and providing residuals to use as normalized and variance-stabilized
-expression values in downstream analysis. We will use the
-[sctransform vignette](https://cran.r-project.org/web/packages/sctransform/index.html).
--->
+```{r exercise_2_check_assays_answer, purl=FALSE}
+assayNames(sce)
+```
 
-Get UMI counts matrix:
+</details>
 
-```{r counts_sct_GSM3872434_allCells}
+:::
+
+## Normalisation with variance stabilising transformation
+
+As in the demonstration, we will extract the counts matrix from our SCE object
+and run the variance stabilising transformation (VST) algorithm, using the
+`sctranform` package's `vst` command, directly on the matrix.
+
+```{r extract_counts_matrix}
 counts <- counts(sce)
-colnames(counts) <- colData(sce)$Barcode
 ```
 
-### Inspect data
+### Estimation and transformation
 
-<!--
-We will now calculate some properties and visually inspect the data. Our main
-interest is in the general trends not in individual outliers. Neither genes nor
-cells that stand out are important at this step, but we focus on the global trends.
--->
+:::exercise 
 
-Derive gene and cell attributes from the UMI matrix.
+Now use the `vst` function to estimate model parameters and perform the variance
+stabilizing transformation.
 
-```{r attr_comp_sct_GSM3872434_allCells}
+<details><summary>Hint</summary>
 
+You will need to provide 4 arguments:
 
+* `umi` - The matrix of UMI counts with genes as rows and cells as columns  
+* `latent_var` - The independent variables to regress out as a character vector
+- in this case this should be 'log_umi'
+* `return_gene_attr` - set to 'TRUE'
+* `return_cell_attr` - set to 'TRUE' 
 
+</details>
 
+<details><summary>Answer</summary>
 
-
-```
-
-Mean-variance relationship plot
-
-<!--
-For the genes, we can see that up to a mean UMI count of 0 the variance follows
-the line through the origin with slop one, i.e. variance and mean are roughly
-equal as expected under a Poisson model. However, genes with a higher average
-UMI count show overdispersion compared to Poisson.
--->
-
-```{r attr_plot_sct_GSM3872434_allCells}
-
-
-
-
-```
-
-Mean-detection-rate relationship plot
-
-<!--
-In line with the previous plot, we see a lower than expected detection rate in the medium expression range. However, for the highly expressed genes, the rate is at or very close to 1.0 suggesting that there is no zero-inflation in the counts for those genes and that zero-inflation is a result of overdispersion, rather than an independent systematic bias.
--->
-
-```{r scatter_detecRate_logMean_sct_GSM3872434_allCells}
-# add the expected detection rate under Poisson model
-
-
-
-```
-
-### Transformation
-
-<!--
-"Based on the observations above, which are not unique to this particular data
-set, we propose to model the expression of each gene as a negative binomial
-random variable with a mean that depends on other variables. Here the other
-variables can be used to model the differences in sequencing depth between
-cells and are used as independent variables in a regression model. In order to 
-avoid overfitting, we will first fit model parameters per gene, and then use
-the relationship between gene mean and parameter values to fit parameters,
-thereby combining information across genes. Given the fitted model parameters,
-we transform each observed UMI count into a Pearson residual which can be
-interpreted as the number of standard deviations an observed count was away
-from the expected mean. If the model accurately describes the mean-variance
-relationship and the dependency of mean and latent factors, then the result
-should have mean zero and a stable variance across the range of expression."
-[sctransform vignette](https://cran.r-project.org/web/packages/sctransform/index.html).
--->
-
-Estimate model parameters and transform data
-
-<!--
-The vst function estimates model parameters and performs the variance stabilizing
-transformation. Here we use the log10 of the total UMI counts of a cell as variable
-for sequencing depth for each cell. After data transformation we plot the model
-parameters as a function of gene mean (geometric mean).
--->
-
-```{r comp_sct_GSM3872434_allCells, warning=FALSE}
-print(dim(counts))
-# We use the Future API for parallel processing; set parameters here
-future::plan(strategy = 'multicore', workers = 4)
-options(future.globals.maxSize = 10 * 1024 ^ 3)
-
+```{r exercise_3_answer, include=FALSE, purl=FALSE}
 set.seed(44)
-
-# now transform:
-
-
-
-
-
-
-
-
+vst_out <- vst(umi = counts,
+               latent_var = 'log_umi',
+               return_gene_attr = TRUE,
+               return_cell_attr = TRUE
+  )
 ```
 
-Inspect model:
+</details>
 
-```{r model_show_sct_GSM3872434_allCells}
+:::
+
+Check that the model used is the one we want (regressing out the effect of 
+library size).
+
+```{r check_vst_model}
 print(vst_out$model_str)
 ```
 
-We will look at several genes in more detail.
+:::exercise
 
-```{r plot_model_1_sct_GSM3872434_allCells}
-rowData(sce) %>%
-  as.data.frame %>%
-  filter(Symbol %in% c('RPL10', 'FTL'))
+Use the `plot_model` function to inspect the genes 'RPL10' and 'FTL' to see if
+the fitted relationship between cell total UMI and gene expression, and to 
+check the residuals.
 
-# plot model data for these two genes:
+<details><summary>Hint</summary>
 
+First you will need to retrieve the Ensembl IDs for each of the genes.
 
+The `plot_model` function requires four arguments:
 
++ `x` - the output of `vst`
++ `umi` - the counts matrix that `vst` was run on
++ `goi` - the IDs of the **g**enes **o**f **i**nterest - these should match the
+rownames of the original counts matrix. In our case these should be Ensembl IDS
++ `plot_residual` - set this to `TRUE`
 
+</details>
+
+<details><summary>Answer</summary>
+
+```{r exercise_4_answer, purl=FALSE}
+ensId <- rowData(sce) %>%
+	as.data.frame %>%
+	filter(Symbol %in% c('RPL10', 'FTL')) %>%
+  pull("ID")
+
+plot_model(x = vst_out,
+           umi = counts,
+           goi = ensId,
+           plot_residual = TRUE)
 ```
 
-Distribution of residual mean:
+</details>
 
-```{r plot_model_resMean_sct_GSM3872434_allCells}
+:::
+
+### Overall properties of transformed data
+
+The distribution of residual mean should be centered around 0.
+
+```{r residual_mean_histogram}
 ggplot(vst_out$gene_attr, aes(residual_mean)) +
   geom_histogram(binwidth=0.01)
 ```
 
-Distribution of residual variance:
+The distribution of residual variance should be centered around 1.
 
-```{r plot_model_resVar_sct_GSM3872434_allCells}
+```{r residual_variance_histogram}
 ggplot(vst_out$gene_attr, aes(residual_variance)) +
   geom_histogram(binwidth=0.1) +
   geom_vline(xintercept=1, color='red') +
   xlim(0, 10)
 ```
 
-Variance against mean (genes):
+Finally, check that the relationship between variance and mean has been removed.
 
-```{r plot_model_resVar_gMean_sct_GSM3872434_allCells}
+```{r residual_variance_v_mean_plot}
 ggplot(vst_out$gene_attr,
        aes(log10(gmean), residual_variance)) +
        geom_point(alpha=0.3, shape=16) +
        geom_density_2d(size = 0.3)
-```
-
-Check genes with large residual variance:
-
-```{r table_show_sct_GSM3872434_allCells}
-dd <- vst_out$gene_attr %>%
-	arrange(-residual_variance) %>%
-	slice_head(n = 22) %>%
-	mutate(across(where(is.numeric), round, 2))
-
-dd %>% tibble::rownames_to_column("ID") %>%
-	left_join(as.data.frame(rowData(sce))[,c("ID", "Symbol")], "ID") %>%
-	DT::datatable(rownames = FALSE)
-```
-
-Check transformed values:
-
-```{r check_trans_sct_GSM3872434_allCells}
-print(dim(vst_out$y))
-vst_out$y[1:10,1:5]
-```
-
-Genes that are expressed in fewer than 5 cells are not used and not returned,
-so to add vst_out$y as an assay we need to remove the missing genes.
-
-```{r subsetGenes_sct_GSM3872434}
-sceOrig <- sce
-sceOrig
-geneOverlap <- rownames(sce) %in% rownames(vst_out$y)
-if(!all(geneOverlap))
-{
-  table(rownames(sce) %in% rownames(vst_out$y))
-  tmpInd <- which(rownames(sce) %in% rownames(vst_out$y))
-  sce <- sce[tmpInd,]
-  assayNames(sce)
-}
-rm(sceOrig)
 ```
