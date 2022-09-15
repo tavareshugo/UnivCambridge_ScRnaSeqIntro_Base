@@ -1,7 +1,6 @@
 ---
 title: "Data Integration and Batch Correction"
-author: "Abbi Edwards"
-date: "24th Jun 2022"
+date: "September 2022"
 output:
   ioslides_presentation:
     widescreen: true
@@ -10,9 +9,12 @@ output:
     css: css/stylesheet.css
 ---
 
-## Workflow
 
-<img src="../Images/workflow2_dataSetIntegra.png" class="center" style="width: 70%; margin-top: 40px;">
+## Single Cell RNAseq Analysis Workflow
+
+```{r echo=FALSE, out.width='60%', fig.align='center'}
+knitr::include_graphics('Images/workflow2_dataSetIntegra.png')
+```
 
 ## Why do we need to think about data integration?
 
@@ -24,7 +26,7 @@ output:
 
 ## Data Integration Workflow
 
-<img src="../Images/DI_workflow.png" class="center" style="width: 100%; margin-top: 40px;">
+<img src="Images/DI_workflow.png" class="center" style="width: 100%; margin-top: 40px;">
 
 ## Formatting our data
 
@@ -44,17 +46,19 @@ Important we make sure things match up
 - Different analysts may have formatted things differently
 
 
-## Cellranger aggr
+## Cellranger `aggr`
 
 A useful quick look
 
-<img src="../Images/10X_cellranger_aggr.png" class="centerimg" style="width: 60%; margin-top: 60px;">
+```{r echo=FALSE, out.width='60%', fig.align='center'}
+knitr::include_graphics('Images/10X_cellranger_aggr.png')
+```
 
 ## Checking for batch effects
 
-<img src="../Images/batchCor_prePCA.png" class="centerimg" style="width: 32%; margin-top: 60px;">
-<img src="../Images/batchCor_preTSNE.png" class="left" style="width: 32%; margin-top: 60px;">
-<img src="../Images/batchCor_preUMAP.png" class="right" style="width: 32%; margin-top: 60px;">
+<img src="Images/batchCor_prePCA.png" class="centerimg" style="width: 32%; margin-top: 60px;">
+<img src="Images/batchCor_preTSNE.png" class="left" style="width: 32%; margin-top: 60px;">
+<img src="Images/batchCor_preUMAP.png" class="right" style="width: 32%; margin-top: 60px;">
 
 ## Batch Corrections
 
@@ -72,7 +76,11 @@ A useful quick look
 
   - [Benchmark studies](https://theislab.github.io/scib-reproducibility/) can be used as a reference to choose suitable method
 
-## FastMNN ([Haghverdi et al 2018](https://www.nature.com/articles/nbt.4091))
+## FastMNN ([Haghverdi et al 2018](https://www.nature.com/articles/nbt.4091)) {#less_space_after_title}
+
+```{r echo=FALSE, out.width='60%', fig.align='center'}
+knitr::include_graphics('Images/MNNcorrect.jpeg')
+```
 
 1. Perform a multi-sample PCA on the (cosine-)normalized expression values to reduce dimensionality.
 2. Identify MNN pairs in the low-dimensional space between a reference batch and a target batch.
@@ -80,17 +88,19 @@ A useful quick look
 4. Correct the cells in the target batch towards the reference, using locally weighted correction vectors.
 5. Merge the corrected target batch with the reference, and repeat with the next target batch.
 
-<img src="../Images/MNNcorrect.jpeg" class="center" style="width: 50%; margin-top: 40px;">
+## FastMNN ([Haghverdi et al 2018](https://www.nature.com/articles/nbt.4091)) {#less_space_after_title}
 
-## FastMNN ([Haghverdi et al 2018](https://www.nature.com/articles/nbt.4091))
+```{r echo=FALSE, out.width='60%', fig.align='center'}
+knitr::include_graphics('Images/MNNcorrect.jpeg')
+```
 
+<div>
 Assumptions (quoted from the paper): 
 
 1. There is at least one cell population that is present in both batches, 
 2. the batch effect is almost orthogonal [i.e. uncorrelated] to the biological subspace, and 
 3. the batch-effect variation is much smaller than the biological-effect variation between different cell types
-
-<img src="../Images/MNNcorrect.jpeg" class="center" style="width: 50%; margin-top: 40px;">
+</div>
 
 ## Checking our correction has worked
 
