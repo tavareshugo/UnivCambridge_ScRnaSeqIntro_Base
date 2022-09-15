@@ -63,6 +63,15 @@ cell_qc_results <- quickPerCellQC(colData(sce),
 
 sce <- sce[, !cell_qc_results$discard]
 
+# Keep only detected genes
+detected_genes <- rowSums(counts(sce)) > 0
+sce <- sce[detected_genes,]
+
+# update cell QC metrics
+colData(sce) <- colData(sce)[,1:4]
+is.mito <- rowData(sce)$Chromosome%in%c("chrM", "MT")
+sce <- addPerCellQC(sce, subsets=list(Mito=is.mito), BPPARAM = bp.params)
+
 saveRDS(sce, "data/R_objects/Caron_filtered.full.rds")
 
 # Now sub-sample to 500 cells per sample
@@ -77,7 +86,7 @@ barcodes <- colData(sce) %>%
 sce.sub <- sce[,barcodes]
 
 # for each gene in each cell: is it expressed?
-detected_genes <- rowSums(counts(sce)) > 0
+detected_genes <- rowSums(counts(sce.sub)) > 0
 sce.sub <- sce.sub[detected_genes, ]
 
 # update cell QC metrics

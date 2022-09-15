@@ -190,3 +190,10 @@ demonstration.
 sbatch 13-Batch_Correction.R
 ```
 --> data/R_objects/Caron_batch_corrected.500.rds
+
+# 14. Clustering - for cluster marker genes section
+
+```
+sbatch 14-Clustering.R
+```
+--> data/R_objects/Caron_clustered.500.rds
