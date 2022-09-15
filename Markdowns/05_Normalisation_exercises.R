@@ -1,13 +1,14 @@
 # Normalisation Practical
 
 # In the demonstration we ran the normalisation using just 500 cells per sample.
-# For this practical you will carry out normalisation, but this time using the 
-# entire data set. Some of the commands will take a little longer to run this 
-# time.
+# For this practical you will carry out normalisation, but this time using all
+# of the cells in one sample - ETV6_RUNX_1. Some of the commands will take a
+# little longer to run this time.
 
 # load_packages 
 library(scater)
 library(scran)
+library(sctransform)
 library(tidyverse)
 library(BiocParallel)
  
@@ -66,8 +67,9 @@ counts <- counts(sce)
 
 ## -- Exercise 3 -- ############################################################
 
-# Now use the `vst` function to estimate model parameters and perform the
-# variance stabilizing transformation.
+# Now use the `vst` function on the counts matrix to estimate model parameters
+# and perform the variance stabilizing transformation. Call the newly created
+# object `vst_out`.
 
 
 # PUT YOUR CODE HERE
@@ -103,6 +105,5 @@ ggplot(vst_out$gene_attr, aes(residual_variance)) +
 # residual_variance_v_mean_plot 
 ggplot(vst_out$gene_attr,
        aes(log10(gmean), residual_variance)) +
-       geom_point(alpha=0.3, shape=16) +
-       geom_density_2d(size = 0.3)
+       geom_point(alpha=0.3, shape=16)
 
