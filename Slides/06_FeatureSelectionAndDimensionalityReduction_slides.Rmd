@@ -1,7 +1,6 @@
 ---
 title: "Feature Selection and Dimensionality Reduction"
-author: "Hugo Tavares and Chandra Chilamakuri"
-date: 'June 2022'
+date: 'September 2022'
 output:
   ioslides_presentation:
     widescreen: true
