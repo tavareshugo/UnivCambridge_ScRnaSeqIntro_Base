@@ -1,7 +1,6 @@
 ---
 title: "Introduction to single-cell RNA-seq analysis - Normalisation"
-author: "Stephane Ballereau"
-date: "June 2022"
+date: "September 2022"
 output:
   ioslides_presentation:
     widescreen: true
