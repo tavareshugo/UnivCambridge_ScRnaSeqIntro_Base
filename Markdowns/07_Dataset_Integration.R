@@ -172,6 +172,8 @@ data.frame(Cluster = sce_all$cluster_corrected, Sample = sce_all$SampleName) %>%
 cluster_var <- clusterAbundanceVar(sce_all$cluster_corrected, 
                                    batch = sce_all$SampleName)
 
+batch_per_cluster <- table(Cluster = sce_all$cluster_corrected, 
+                           Batch = sce_all$SampleName)
 batch_per_cluster[order(cluster_var, decreasing = TRUE), ]
 
 ## Preserving Biological Heterogeneity
