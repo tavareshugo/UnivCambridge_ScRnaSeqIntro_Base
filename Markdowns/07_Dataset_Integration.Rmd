@@ -597,7 +597,7 @@ plotReducedDim(sce_all, dimred = "TSNE_corrected_mo", colour_by = "SampleName")
 
 # Correction Diagnostics
 
-## Mixing Between Batches {.tabset}
+## Mixing Between Batches - Bar plots {.tabset}
 
 As before, we can explore our data to see if clustering the cells using the
 corrected data results in batches containing cells from multiple
@@ -632,6 +632,7 @@ data.frame(Cluster = sce_all$cluster_corrected, Sample = sce_all$SampleName) %>%
   scale_y_continuous(labels = scales::percent)
 ```
 
+## Mixing Between Batches - variance of batch abundancies in clusters
 
 One approach to assess the degree of mixing between clusters is to calculate the
 variance in the log-normalized cell abundances across batches for each cluster.
@@ -643,7 +644,7 @@ Alternatively, these may be due to true biological differences between batches
 (which could be investigated, for example, by looking at the expression of known
 cell-type-specific genes).
 
-```{r,}
+```{r cluster_variance}
 cluster_var <- clusterAbundanceVar(sce_all$cluster_corrected, 
                                    batch = sce_all$SampleName)
 
@@ -669,13 +670,15 @@ achieve perfect mixing but also discard the biological heterogeneity of
 interest. Lets go back to our simple two sample example to look at some of the
 ways we can investigate.
 
-```{r, purl=FALSE}
+```{r cluster_table_rep1, purl=FALSE}
 table(colLabels(sce_rep1))
 ```
 
-```{r, purl=FALSE}
+```{r cluster_table_rep2, purl=FALSE}
 table(colLabels(sce_rep2))
 ```
+
+### Nesting of before and after correction clusters
 
 Ideally, we should see a many-to-1 mapping where the post-correction clustering
 is nested inside the pre-correction clustering. This indicates that any
@@ -686,7 +689,7 @@ nesting of post-correction clusters within the pre-correction clusters.
 Well-nested clusters have high `max` values, indicating that most of their cells
 are derived from a single pre-correction cluster.
 
-```{r}
+```{r nest_clusters}
 original_clusters <- colLabels(sce_rep1)
 corrected_clusters_rep1 <- sce[,colnames(sce_rep1)]$cluster_corrected
 tab <- nestedClusters(ref=paste("before", original_clusters),
@@ -723,6 +726,8 @@ pheatmap(tab$proportions,
          main="Sample 2 comparison")
 ```
 
+### Adjusted Rand index
+
 We can use the adjusted Rand index to quantify the agreement between the
 clusterings before and after batch correction. The adjusted Rand index gives us
 a measure of the proportion of pairs of cells that have the same relative status
@@ -734,11 +739,11 @@ Larger indices are more desirable as this indicates that within-batch
 heterogeneity is preserved, though this must be balanced against the ability of
 each method to actually perform batch correction.
 
-```{r}
+```{r rand_index_rep1}
 pairwiseRand(corrected_clusters_rep1, colLabels(sce_rep1), mode="index")
 ```
 
-```{r}
+```{r rand_index_rep2}
 pairwiseRand(corrected_clusters_rep2, colLabels(sce_rep2), mode="index")
 ```
 
@@ -749,7 +754,7 @@ merged clustering. Conversely, we might see low ratios on the diagonal if the
 correction inflated or introduced spurious heterogeneity inside a within-batch
 cluster.
 
-```{r cluster_wise_ari_rep1, fig.width=5, fig.height=5}
+```{r cluster_wise_rand_index_rep1, fig.width=5, fig.height=5}
 tab <- pairwiseRand(colLabels(sce_rep1), corrected_clusters_rep1)
 
 pheatmap(tab, 
@@ -759,7 +764,7 @@ pheatmap(tab,
 ```
 
 
-```{r cluster_wise_ari_rep2, fig.width=4, fig.height=4}
+```{r cluster_wise_rand_index_rep2, fig.width=4, fig.height=4}
 tab <- pairwiseRand(colLabels(sce_rep2), corrected_clusters_rep2)
 
 pheatmap(tab, 
@@ -777,7 +782,7 @@ the average correction vector at each merge step. This is returned via the
 lost.var field in the metadata of mnn.out, which contains a matrix of the
 variance lost in each batch (column) at each merge step (row).
 
-```{r last_variance}
+```{r lost_variance}
 metadata(sce_quick_mnn)$merge.info$lost.var
 ```
 
