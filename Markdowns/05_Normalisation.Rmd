@@ -430,16 +430,17 @@ vst_out <- vst(umi = counts,
                latent_var = c('log_umi'),
                return_gene_attr = TRUE,
                return_cell_attr = TRUE
+               
   )
 ```
 
-```{r sctransform_vst_run, echo=FALSE}
+```{r sctransform_vst_run, echo=FALSE, message=FALSE, warning=FALSE}
 set.seed(44)
 vst_out <- vst(umi = counts,
                latent_var = c('log_umi'),
                return_gene_attr = TRUE,
                return_cell_attr = TRUE,
-               verbosity = 2
+               verbosity = 0
   )
 ```
 
