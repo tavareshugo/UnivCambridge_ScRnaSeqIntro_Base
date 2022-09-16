@@ -1,6 +1,7 @@
 ---
 title: "Introduction to single-cell RNA-seq analysis - Normalisation"
-date: "September 2022"
+author: "Chandra Chilamakuri and Stephane Ballereau"
+date: "20/09/2022"
 output:
   ioslides_presentation:
     widescreen: true
@@ -31,58 +32,92 @@ knitr::include_graphics('Images/workflow2.png')
 knitr::include_graphics('Images/workflow2_normalisation.png')
 ```
 
-## Motivation
+## Raw UMI counts distribution
 
-Systematic differences in sequencing coverage between libraries occur because of:
+```{r echo=FALSE, out.width='50%', fig.align='center'}
+knitr::include_graphics('Images/PBMMC_1_counts_before_norm.png')
+```
 
-* low input material,
-* differences in cDNA capture
-* differences in PCR amplification.
+## Why UMI counts differ among the cells?
 
-Normalisation removes such differences
+* We derive biological insights downstream by comparing cells against each other.
+* But the UMI counts differences makes it harder to compare cells.
+
+* Why total transcript molecules (UMI counts) detected between cells differ?
+  * Biological:
+    * Cell sub type differences, like size and transcription activity etc.
+  * Technical: scRNA data is inherently noisy
+    * Low mRNA content per cell
+    * cell-to-cell differences in mRNA capture efficiency
+    * Variable sequencing depth
+    * PCR amplification efficiency
+
+Normalization removes technical differences
 so that differences between cells are not technical but biological,
 allowing meaningful comparison of expression profiles between cells.
 
-Normalisation and batch correction have different aims:
+## Effect of Normalization on UMI counts distribution {.columns-2 .smaller}
 
-Normalisation addresses technical differences only, while batch correction
-considers both technical and biological differences.
+### 
 
-Sources: chapters on normalisation in the
-[OSCA book](http://bioconductor.org/books/3.14/OSCA.basic/normalization.html), the
-[Hemberg group materials](https://scrnaseq-course.cog.sanger.ac.uk/website/index.html) and [sctransform](https://github.com/ChristophH/sctransform).
+```{r echo=FALSE, out.width='100%', fig.align='left'}
+knitr::include_graphics('Images/PBMMC_1_counts_before_norm.png')
+```
 
-## Initial methods
+<p class="forceBreak"></p>
 
-* In scaling normalization, the “normalization factor” is an estimate of the
-library size relative to the other cells.
+### 
+```{r echo=FALSE, out.width='100%', fig.align='left'}
+knitr::include_graphics('Images/PBMMC_1_counts_after_norm.png')
+```
 
-* Steps usually include:
-  * computation of a cell-specific 'scaling' or 'size' factor
-    * that represents the relative bias in that cell
-  * division of all counts for the cell by that factor to remove that bias.
+
+
+## General principle behind normalisation
+
+* Normalization has two steps
+  1. Scaling
+    * First get size factors or normalization factors
+    * Usually one size factor per cell
+    * Scale the counts by divide the raw counts of a cell with cell specific size factor
+  
+  2. Transformation: Transform the data after scaling
+    * Per million
+    * log2 
+    * square root transformation
+    * Pearson residuals (eg. sctransform)
     
-* Assumption: any cell specific bias will affect genes the same way.
+## Normalization toy examle
 
-## Examples
+* CPM: Counts-per-million
+* One of the initial normalization methods for counts data
 
-CPM: convert raw counts to counts-per-million (CPM)
+```{r echo=FALSE, out.width='90%', fig.align='left'}
+knitr::include_graphics('Images/normalisation_toy_example.png')
+```
 
-  * for each cell
-  * by dividing counts by the library size then multiplying by 1.000.000.
-  * does not address compositional bias caused by highly expressed genes that are also
-differentially expressed between cells.
 
-<!-- ## Examples --> 
+## Bulk RNAseq methods are not suitable for scRNAseq data
 
-DESeq's size factor
+* Some of the bulk RNAseq normalization methods ..
+  * Library size normalization
+  * DEseq
+  * edgeR-TMM
 
-  * For each gene, compute geometric mean across cells.
-  * For each cell
-    * compute for each gene the ratio of its expression to its geometric mean,
-    * derive the cell's size factor as the median ratio across genes.
-  * Not suitable for sparse scRNA-seq data as the geometric mean is computed on non-zero
-values only.
+* Although bulk RNAseq data also suffers from technical variability, extreme sparsity of scRNA-seq data is suitable for bulk based methods.
+  
+## Comparision of bulk methods
+
+```{r echo=FALSE, out.width='90%', fig.align='left'}
+knitr::include_graphics('Images/size_factors_plot.png')
+```
+
+## scRNAseq specifc normalization methods
+
+* Many scRNaseq specific methods developed
+  * Deconvolution
+  * sctransform
+* These methods overcome the sparsity by pooling the cells.
 
 ## Deconvolution
 
@@ -94,54 +129,45 @@ knitr::include_graphics("../Images/scran_Fig3c2.png", auto_pdf = TRUE)
 
 Steps:
 
-* compute scaling factors,
-* apply scaling factors
+* compute scaling factors by pooling cells
+* apply scaling factors to get scaled data
+* log2 transform the data
 
-## sctransform
+## sctransform {.columns-2 .smaller}
 
-<div class="columns-2">
+### 
 
-With scaling normalisation a correlation remains between the mean and variation
-of expression (heteroskedasticity).
+* All the above normalization methods use one factor for a cell to normalize all the genes in that cell
+* A single scaling factor does not effectively normalize both lowly and highly expressed genes
+* Any correlation between between total UMI counts and gene UMI counts indicates existence of technical variability 
 
-This affects downstream dimensionality reduction as the few main new dimensions are usually correlated with library size.
+<p class="forceBreak"></p>
 
-sctransform addresses the issue by:
+### 
+```{r echo=FALSE, out.width='100%', fig.align='left'}
+knitr::include_graphics('Images/total_UMI_counts_vs_gene_UMI_counts.png')
+```
 
-* regressing library size out of raw counts
-* providing residuals to use as normalized and variance-stabilized expression values 
 
-<!-- Mean-variance relationship -->
+## sctransform {.columns-2 .smaller}
 
-![](../Images/sctransform1.png){width=80%}
-</div>
+### Algorithm
 
-<!--
-https://rawgit.com/ChristophH/sctransform/supp_html/supplement/variance_stabilizing_transformation.html
-For the genes, we can see that up to a mean UMI count of ca. 0.1 the variance follows the line through the origin with slop one, i.e. variance and mean are roughly equal as expected under a Poisson model. However, genes with a higher average UMI count show overdispersion compared to Poisson.
--->
+* Expression of a gene is modeled by a negative binomial random variable with
+a mean that depends on library size
+* Library size is used as the independent variable in a regression model
+* The model is fit for each gene, then combined data across genes is used to fit
+parameters
+* Transform UMI counts to Pearson residuals ( the number of standard deviations
+away from the expected mean).
 
-## sctransform
+<p class="forceBreak"></p>
 
-Variables
+###  
 
-* model the expression of each gene as a negative binomial random variable
-with a mean that depends on other variables
-
-* which model the differences in sequencing depth between cells
-
-* and used as independent variables in a regression model
-
-Regression
-
-* fit model parameters for each gene
-
-* combine data across genes using the relationship between gene mean and parameter values to fit parameters
-
-* transform each observed UMI count into a Pearson residual
-  * ~ number of standard deviations away from the expected mean 
-
-* expect mean of 0 and stable variance across the range of expression
+```{r echo=FALSE, out.width='80%', fig.align='left'}
+knitr::include_graphics('Images/after_sctransform_applied.png')
+```
 
 ## sctransform
 
@@ -154,13 +180,20 @@ Example of the transformation outcome for two genes:
 knitr::include_graphics("../Images/sctransform2.png", auto_pdf = TRUE)
 ```
 
+## Is normalization working?
+
+* What are the signs that the normalization method is working?
+  * Using PCA: Library size should not be a major contributor to top few principle components.
+  * Does clustering make biological sense?
+  * Take a look at the plots of cell UMI counts versus gene UMI counts
+  
+  
 ## Recap
 
-Early methods developed for bulk RNA-seq are not appropriate for sparse scRNA-seq data.
+* Early methods developed for bulk RNA-seq are not appropriate for sparse scRNA-seq data.
 
-Simple scaling methods are ok for clustering.
 
-The deconvolution method draws information from pools of cells to derive cell-based scaling factors that account for composition bias.
+* The deconvolution method draws information from pools of cells to derive cell-based scaling factors that account for composition bias.
 
-The sctransform method uses sequencing depth and information across genes to stabilise expression variance across the expression range.
+* The sctransform method uses sequencing depth and information across genes to stabilise expression variance across the expression range.
 
