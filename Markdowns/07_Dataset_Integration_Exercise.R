@@ -7,6 +7,8 @@ library(pheatmap)
 library(magrittr)
 set.seed(1704)
 
+setwd("~/Course_Materials")
+
 # load the data
 sce_all <- readRDS("R_objects/Caron_dimRed.500.rds")
 
