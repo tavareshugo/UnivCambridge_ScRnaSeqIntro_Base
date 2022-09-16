@@ -17,6 +17,7 @@ library(scran)
 library(sctransform)
 library(tidyverse)
 library(BiocParallel)
+library(patchwork)
 
 bpp <- MulticoreParam(7)
 opts_chunk$set(error=FALSE, message=FALSE, warning=FALSE, cache=TRUE)
@@ -28,22 +29,7 @@ chapters on normalisation in the
 [OSCA book](http://bioconductor.org/books/3.14/OSCA.basic/normalization.html) 
 and the [Hemberg Group course materials](https://www.singlecellcourse.org/).
 
-## Learning objectives
 
-* Understand why normalisation is required
-* Understand concepts of two normalisation methods
-  * deconvolution
-  * sctransform 
-
-## Why normalise?
-
-Systematic differences in sequencing coverage between libraries occur because of
-low input material, differences in cDNA capture and PCR amplification.
-Normalisation removes such differences so that differences between cells are not
-technical but biological, allowing meaningful comparison of expression profiles
-between cells. Normalisation and batch correction have different aims.
-Normalisation addresses technical differences only, while batch correction
-considers both technical and biological differences.
 
 ```{r load_packages, eval=FALSE}
 library(scater)
@@ -51,7 +37,7 @@ library(scran)
 library(sctransform)
 library(tidyverse)
 library(BiocParallel)
-
+library(patchwork)
 bpp <- MulticoreParam(7)
 ```
 
@@ -70,13 +56,83 @@ sce
 table(sce$SampleName)
 ```
 
-# Scaling normalizations
 
-In scaling normalization, the “normalization factor” is an estimate of the
-library size relative to the other cells. Steps usually include: computation of
-a cell-specific 'scaling' or 'size' factor that represents the relative bias in
+## Learning objectives
+
+* Understand why normalisation is required
+* Understand concepts of two normalisation methods
+  * deconvolution
+  * sctransform 
+
+## Why normalise?
+
+```{r norm_intro_plots}
+oneSamTab <- colData(sce) %>% 
+  as.data.frame() %>% 
+  filter(SampleName == "PBMMC_1") %>% 
+  dplyr::select(SampleName,Barcode, sum) %>% 
+  mutate(cell_num = 1:n())
+
+p_before_nom <- ggplot(data=oneSamTab, aes(x=cell_num, y=sum)) +
+  geom_bar(stat = 'identity') +
+  labs( x= 'Cell Index',
+        y='Cell UMI counts',
+        title = "PBMMC_1: Before Normalization" ) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size=20, color = 'red')
+  )
+
+p_before_nom
+
+```
+
+* Above plot shows the UMI counts/cell (transcript molecules) for 500 cell from the PBMMC_1 sample
+* UMI counts fluctuate
+* We derive biological insights downstream by comparing cells against each other.
+* But the UMI counts differences makes it harder to compare cells.
+
+* Why total transcript molecules (UMI counts) detected between cells differ?
+  * Biological:
+    * Cell sub type differences, like size and transcription activity etc.
+  * Technical: scRNA data is inherently noisy
+    * Low mRNA content per cell
+    * cell-to-cell differences in mRNA capture efficiency
+    * Variable sequencing depth
+    * PCR amplification efficiency
+
+* A normalization technique makes the UMI counts distribution uniform, so that each cell has similar counts.
+* Normalization is a critical step that corrects cell-to-cell technical differences.
+* By normalizing, downstream comparisons of relative expression between cells are valid.
+
+
+## Normalization strategies
+
+The sparse nature of scRNA data makes normalization difficult, unlike bulk RNAseq data.
+
+* Broadly two classes
+  1. Spike-in methods
+    * Uses pike-in controls for normalisation
+    * Not available for droplet based scRNA techniques like 10x.
+  2.  Non-spike-in methods: 
+    * Using available counts data for normalization
+    * DEseq2
+    * edgeR - TMM
+    * Library size normalization
+    * deconvolution
+    * sctransform 
+    
+* Typical normalization has two steps
+  1. scaling
+    * Estimate size or scaling or normalization factor: computation of a cell-specific 'scaling' or 'size' factor or “normalization factor” that represents the relative bias in
 that cell and division of all counts for the cell by that factor to remove that
 bias. Assumption: any cell specific bias will affect genes the same way.
+    * Scale the data by dividing the count for each gene with the appropriate size factor for that cell
+  2. Transformation
+    * log2
+    * Square root transformation
+    * Pearson residuals (eg. sctransform)
+    
 
 Scaling methods typically generate normalised counts-per-million (CPM) or
 transcripts-per-million (TPM) values that address the effect of sequencing
@@ -87,104 +143,23 @@ variance, which does not vary with the mean (homoscedasticity). A widely used
 This works well for highly expressed genes (as in bulk RNA-seq) but less so for
 sparse scRNA-seq data.
 
-## CPM
 
-Convert raw counts to counts-per-million (CPM) for each cell by dividing counts
-by the library size then multiplying by 1 million. However, this does not
-address composition bias caused by highly expressed genes that are also
-differentially expressed between cells. In `scuttle` CPMs are computed as
-follows:
+![DESeq,edgeR and Library size normalizations](./Images/size_factors_plot.png)
+* DEseq, edgeR-TMM and Library size normalization initially developed for bulk RNAseq
+* Applying these methods on scRNAseq data systematically under or over estimate size factors. i.e systematically deviate from true size factors.
+* This deviation is the result of removing zeroes prior to normalization. 
+* Therefore other normalization methods specific to scRNAseq data like deconvolution, sctransform etc. were proposed.
+ 
 
-```
-norm_factor <- colSums(expr_mat[-spikes, ])
-return(t(t(expr_mat)/norm_factor)) * 10^6
-```
+## Deconvolution
 
-## DESeq's size factor
+Because single-cell data tend to have a substantial number of low and zero counts, these bulk normalization methods may be problematic for single-cell data. 
 
-For each gene, compute geometric mean across cells. for each cell compute for
-each gene the ratio of its expression to its geometric mean, and derive the
-cell's size factor as the median ratio across genes. Not suitable for sparse
-scRNA-seq data as the geometric is computed on non-zero values only. This method
-is also known as 'Relative Log Expression' (RLE) in `edgeR` and `scater`.
+* Deconvolution aims to normalize expression values based on summed values from pools of cells.
+* Since cell summation results in fewer zeros, the ensuing normalization is less susceptible to errors than existing methods. 
+* The estimated size factors are only relevant to the pools of cells, even though normalization accuracy has improved. 
+* Each pool's size factor is deconvolved into its constituent cells' size factors.
 
-Example code:
-
-```
-geomeans <- exp(rowMeans(log(expr_mat[-spikes, ])))
-SF <- function(cnts) {
-    median((cnts/geomeans)[(is.finite(geomeans) &
-		geomeans > 0)])
-}
-norm_factor <- apply(expr_mat[-spikes, ], 2, SF)
-return(t(t(expr_mat)/norm_factor))
-```
-
-## Weighted Trimmed mean of M-values
-
-To compute weighted Trimmed mean of M-values (TMM), a given cell is chosen as a
-reference to use in computation for other cells. The M-values are gene-wise
-log2-fold changes between cells. Trimming entails the removal of the top and
-bottom 30% of values. The size factor is computed as the average for the
-remaining cells with a weight according to inverse variances. This method
-assumes that most genes are not differentially expressed, and the 40% of genes
-left after trimming may include many zero counts.
-
-```{r calcNormFactors}
-sizeFactors(sce) <- edgeR::calcNormFactors(counts(sce), method = "TMM")
-```
-
-## Library size normalization
-
-For each cell, the library size factor is proportional to the library size such
-that the average size factor across cell is one.
-
-Advantage: normalised counts are on the same scale as the initial counts.
-
-Compute size factors:
-
-```{r library_size_factors}
-lib.sf <- librarySizeFactors(sce)
-summary(lib.sf)
-```
-
-Size factor distribution: wide range, typical of scRNA-seq data.
-
-```{r library_size_factors_hist}
-data.frame("log10libSf"=log10(lib.sf)) %>% 
-  ggplot(aes(x=log10libSf)) + 
-    geom_histogram(bins=50)
-```
-
-Assumption: absence of composition bias; differential expression between two 
-cells is balanced: upregulation in some genes is accompanied by downregulation 
-of other genes. Not observed.
-
-Inaccurate normalisation due to unaccounted-for composition bias affects the 
-size of the log fold change measured between clusters, but less so the
-clustering itself. It is thus sufficient to identify clusters and top marker 
-genes.
-
-## Normalisation by deconvolution
-
-Composition bias occurs when differential expression between two samples or here
-cells is not balanced. For a fixed library size, identical in both cells,
-upregulation of one gene in a cell will means fewer UMIs can be assigned to
-other genes, which would then appear down regulated. Even if library sizes are
-allowed to differ, with that for the cell with upregulation being higher,
-scaling normalisation will reduce normalised counts. Non-upregulated would
-therefore also appear downregulated.
-
-For bulk RNA-seq, composition bias is removed by assuming that most genes are
-not differentially expressed between samples, so that differences in non-DE 
-genes would amount to the bias, and used to compute size factors.
-
-Given the sparsity of scRNA-seq data, the assumptions are not appropriate.
-
-The deconvolution method increases read counts by pooling cells into groups,
-computing size factors within each of these groups. This process is repeated
-many times, changing pools each time to collect several size factors for each
-cell, from which is derived a single value for that cell.
 
 ![](Images/scran_Fig3.png){width=70%}
 
@@ -221,6 +196,7 @@ large numbers of very lowly expressed genes will not bias the normalization.
 Plot deconvolution size factors against library size factors:
 
 ```{r deconvolution_norm_v_library_size}
+lib.sf <- librarySizeFactors(sce)
 data.frame(LibrarySizeFactors = lib.sf, 
            DeconvolutionSizeFactors = deconv.sf,
 			     SampleGroup = sce$SampleGroup) %>%
@@ -238,6 +214,28 @@ differences. We use `scater::logNormCounts()`.
 ```{r log_norm_counts}
 sce <- logNormCounts(sce)
 assayNames(sce)
+
+norm_counts <- logNormCounts(sce,transform='none' ) %>% 
+  assay('normcounts') %>% 
+  as.matrix() %>% 
+  colSums()
+norm_counts <- tibble(Barcode=names(norm_counts),
+                      normCounts = log2(norm_counts)
+                      )
+norm_counts <- inner_join(norm_counts, oneSamTab, by='Barcode')
+
+
+p_after_norm <- ggplot(data=norm_counts, aes(x=cell_num, y=normCounts)) +
+  geom_bar(stat = 'identity') +
+  labs( x= 'Cell Index',
+        y='Normalized Cell UMI counts',
+        title = "PBMMC_1:After Normalization" ) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size=20, color = 'red')
+  )
+
+p_before_nom + p_after_norm
 ```
 
 ## Save the normalised object
@@ -245,6 +243,7 @@ assayNames(sce)
 ```{r save_normalised, eval=FALSE}
 saveRDS(sce, "results/caron_normalised.rds")
 ```
+
 
 ## Exercise 1
 
@@ -255,7 +254,7 @@ You first load the same object we loaded earlier, then select cells for
 SampleName 'ETV6-RUNX1_1'. You will then cluster cells, compute and apply size
 factors.
 
-# Normalisation with variance stabilising transformation
+# sctransform: Variant Stabilising Transformation
 
 With scaling normalisation a correlation remains between the mean and variation
 of expression (heteroskedasticity). This affects downstream dimensionality
@@ -263,6 +262,8 @@ reduction as the few main new dimensions are usually correlated with library
 size. `sctransform` addresses the issue by regressing library size out of raw
 counts and providing residuals to use as normalized and variance-stabilized
 expression values in some downstream analyses, such as dimensionality reduction.
+
+!["Effect of scaling normalization"](Images/total_UMI_counts_vs_gene_UMI_counts.png)
 
 The `sctransform` package is from the Seurat suite of scRNAseq analysis
 packages. Rather than convert our Single Cell Experiment object into a Seurat
@@ -303,8 +304,6 @@ gene_attr <- data.frame(mean = rowMeans(counts),
   mutate(log_mean = log10(mean)) %>% 
   mutate(log_var = log10(var))
 
-rownames(gene_attr) <- rownames(counts)
-
 dim(gene_attr)
 head(gene_attr)
 ```
@@ -319,7 +318,6 @@ Attributes include for each cell:
 ```{r cell_attributes}
 cell_attr <- data.frame(n_umi = colSums(counts),
                         n_gene = colSums(counts > 0))
-rownames(cell_attr) <- colnames(counts)
 
 dim(cell_attr)
 head(cell_attr)
@@ -350,6 +348,7 @@ rather than an independent systematic bias.
 x = seq(from = -3, to = 2, length.out = 1000)
 poisson_model <- data.frame(log_mean = x,
 			    detection_rate = 1 - dpois(0, lambda = 10^x))
+
 ggplot(gene_attr, aes(log_mean, detection_rate)) + 
   geom_point(alpha=0.3, shape=16) + 
   geom_line(data=poisson_model, color='red') +
@@ -428,7 +427,7 @@ arguments:
 ```{r sctransform_vst, eval=FALSE}
 set.seed(44)
 vst_out <- vst(umi = counts,
-               latent_var = 'log_umi',
+               latent_var = c('log_umi'),
                return_gene_attr = TRUE,
                return_cell_attr = TRUE
   )
@@ -440,7 +439,7 @@ vst_out <- vst(umi = counts,
                latent_var = c('log_umi'),
                return_gene_attr = TRUE,
                return_cell_attr = TRUE,
-               verbosity = 0
+               verbosity = 2
   )
 ```
 
@@ -469,8 +468,8 @@ We check the regression model used is the one the we intended:
 vst_out$model_str
 ```
 
-We will now look at a couple of genes in more detail by plotting observed UMI
-counts and comparing these to plots using the residuals from the modelling.
+We will now look at several genes in more detail by plotting observed UMI counts
+and comparing these to plots using the residuals from the modelling.
 
 For each gene of interest, we will plot:
 
@@ -533,6 +532,7 @@ detection rate values.
 
 ```{r top_genes_residual_var}
 vst_out$gene_attr %>%
+  arrange(desc(residual_variance)) %>% 
 	top_n(n = 10) %>%
 	mutate(across(where(is.numeric), round, 2)) %>% 
   rownames_to_column("ID") %>%
