@@ -133,7 +133,9 @@ plotTSNE(sce, colour_by = "SampleName")
                 perplexity = 50,
                 dimred = "PCA",
                 n_dimred = 10)
-## 
+ 
+## reducedDim(sce, type = "TSNE_perplex50") %>% head()
+ 
 ## # Make a custom visualisation using ggcells
 ggcells(sce, aes(x = TSNE_perplex50.1, y = TSNE_perplex50.2,
                   colour = SampleName)) +
