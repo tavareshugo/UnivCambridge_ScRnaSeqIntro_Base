@@ -94,14 +94,15 @@ plotExplanatoryVariables(sce,
                          ))
 
 
-
+## ----pick_number----------------------------------------------------------------
+table(percent.var > 1)
 
 ## ----choose_elbow--------------------------------------------------------------------------
 chosen_elbow <- findElbowPoint(percent.var)
 chosen_elbow
 
 
-## ----plot_eblow_choice---------------------------------------------------------------------
+## ----plot_elbow_choice---------------------------------------------------------------------
 plot(percent.var)
 abline(v=chosen_elbow, col="dodgerblue")
 
