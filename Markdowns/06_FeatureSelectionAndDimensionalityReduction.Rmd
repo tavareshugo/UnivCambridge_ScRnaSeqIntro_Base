@@ -801,6 +801,11 @@ overview of the entire dataset. Again, it is a good idea to test a range of
 values for these parameters to ensure that they do not compromise any
 conclusions drawn from a UMAP plot.
 
+See this interactive article that goes into more depth about the underlying
+methods, and explores the impacts of changing the n_neighbours and min_dist
+parameters:
+[Understanding UMAP](https://pair-code.github.io/understanding-umap/).
+
 Similarly to what we did with t-SNE, we will explore this further in the
 following exercise.
 
