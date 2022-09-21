@@ -729,6 +729,12 @@ as a character vector</li>
 <summary>
 Answer
 </summary>
+<pre class="r"><code>set.seed(44)
+vst_out &lt;- vst(umi = counts,
+               latent_var = &#39;log_umi&#39;,
+               return_gene_attr = TRUE,
+               return_cell_attr = TRUE
+  )</code></pre>
 </details>
 </div>
 <p>Check that the model used is the one we want (regressing out the

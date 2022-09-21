@@ -212,12 +212,23 @@ You will need to provide 4 arguments:
 
 <details><summary>Answer</summary>
 
-```{r exercise_3_answer, include=FALSE, purl=FALSE}
+```{r exercise_3_answer, eval=FALSE, purl=FALSE}
 set.seed(44)
 vst_out <- vst(umi = counts,
                latent_var = 'log_umi',
                return_gene_attr = TRUE,
                return_cell_attr = TRUE
+  )
+```
+
+
+```{r exercise_3_answer_run, echo=FALSE, purl=FALSE}
+set.seed(44)
+vst_out <- vst(umi = counts,
+               latent_var = 'log_umi',
+               return_gene_attr = TRUE,
+               return_cell_attr = TRUE,
+               verbosity = 0
   )
 ```
 
