@@ -1,30 +1,29 @@
 ---
 title: "Introduction to single-cell RNA-seq analysis"
-author: "Ashley Sawle, Stephane Ballereau"
 date: "May 2022"
 subtitle: Clustering
 output:
   html_document:
-    df_print: paged
     toc: yes
     number_sections: true
+    code_folding: show 
     css: ../css/boxes.css
 ---
 
-```{r knitr_options, echo=FALSE, results="hide", message=FALSE}
-knitr::opts_chunk$set(error=FALSE, message=FALSE, warning=FALSE, cache=FALSE)
-```
+```{r setup, echo=FALSE, message=FALSE, warning=FALSE, purl=FALSE}
+library(knitr)
+library(scater)
+library(scran)
+library(bluster)
+library(cluster)
+library(igraph)
+library(pheatmap)
+library(patchwork)
+library(tidyverse)
+library(DT)
 
-```{r setup, include=FALSE}
-library(scater) # scRnaSeq QC
-library(scran) # scRnaSeq normalisation
-library(bluster) # scRnaSeq clustering
-library(cluster) # for silhouette
-library(igraph) # for graph-based clustering and plotting networks
-library(pheatmap) # for heatmap plotting
-library(patchwork) # to combine plots
-library(tidyverse) # data wrangling and plotting (ggplot2)
-library(DT) # For nice printing of tables in the html
+opts_chunk$set(error=FALSE, message=FALSE, warning=FALSE, cache=TRUE)
+set.seed(123)
 ```
 
 # Overview
@@ -56,7 +55,18 @@ book](http://bioconductor.org/books/release/OSCA.basic/clustering.html#vector-qu
 for details. Graph-base clustering is a more recent development and better
 suited for scRNA-seq, especially large data sets.
 
-# Load data
+# Load the data
+
+```{r load_packages, eval=FALSE}
+library(scater)
+library(scran)
+library(bluster)
+library(cluster)
+library(igraph)
+library(pheatmap)
+library(patchwork)
+library(tidyverse)
+```
 
 We will use the data set generated in the previous session. This contains 7
 samples from the Caron data set. For the purposes of these materials, in the
@@ -67,13 +77,8 @@ sce <- readRDS("R_objects/Caron_batch_corrected.500.rds")
 ```
 
 
-```{r echo=FALSE}
-colData(sce) %>% 
-  as.data.frame() %>% 
-  select(SampleName, BioSample, SampleGroup) %>% 
-  add_count(SampleName, name="Number of Cells") %>% 
-  distinct() %>% 
-  datatable(options = list(dom="t"), rownames = FALSE)
+```{r check_samples}
+table(sce$SampleName)
 ```
 
 # Graph-based clustering overview
@@ -162,14 +167,14 @@ argument `full = TRUE`. If you are only interested in retrieving the clusters,
 this isn't necessary but in this first instance we will retrieve the graph and
 visualise it.
 
-```{r comp_snn}
+```{r clustercells_default}
 clustering1 <- clusterCells(sce, use.dimred="corrected", full=TRUE)
 ```
 
 This has defined `r max(as.numeric(clustering1$clusters))` clusters with varying
 numbers of cells:
 
-```{r}
+```{r table_of_clusters}
 table(clustering1$clusters)
 ```
 
@@ -180,7 +185,7 @@ plotting the results are done using the [*igraph*
 package](https://igraph.org/r/doc/subgraph.html). Cells can be color-coded by
 sample type:
 
-```{r show_walktrap_graph, warning = FALSE, fig.height=6, out.width = '100%'}
+```{r plot_knn_graph, fig.height=6, out.width = '100%'}
 # extract the graph
 snn.gr <- clustering1$objects$graph
 
@@ -220,7 +225,7 @@ legend('bottomright',
 More commonly we will visualise the clusters by superimposing them on a t-SNE or
 UMAP plot. We can store the clusters in the `sce` object `colData`.
 
-```{r}
+```{r plot_tsne_default_clusters, fig.height=6, fig.width=8}
 sce$Clusters1 <- clustering1$clusters
 plotReducedDim(sce, 
                dimred = "TSNE_corrected",
@@ -258,7 +263,7 @@ the package *clusterCells* is using under the hood).
 Let's set the *k* to 15 but keep the other parameters the same. This time we
 will just return the clusters:
 
-```{r}
+```{r clustercells_walktrap_k15}
 sce$walktrap15 <- clusterCells(sce, 
                            use.dimred = "corrected", 
                            BLUSPARAM = SNNGraphParam(k = 15, 
@@ -269,24 +274,24 @@ This time we have defined `r max(as.numeric(sce$walktrap15))` clustering. As a
 general rule, increasing *k* will tend to decrease the number of clusters (not
 always, but generally).
 
-```{r}
+```{r table_clusters_walktrap_k15}
 table(sce$walktrap15)
 ```
 
 We can visualise the assignment of cells from different samples to the clusters
 using a heatmap.
 
-```{r rep_clusters_samples, fig.width=4, fig.height=5}
+```{r heatmap_walktrap_k15, fig.width=4, fig.height=5}
 table(sce$walktrap15, sce$SampleName) %>% 
   pheatmap(cluster_rows = FALSE, cluster_cols = FALSE)
 ```
 
 Most clusters comprise cells from several replicates of a same sample type,
-cluster 6 appears to be predominantly cells from the ETV6-RUNX samples.
+cluster 10 appears to be predominantly cells from the ETV6-RUNX samples.
 
 We can visualise this on the TSNE:
 
-```{r}
+```{r plot_tsne_walktrap_k15, fig.height=6, fig.width=8}
 plotReducedDim(sce, 
                dimred = "TSNE_corrected",
                colour_by="walktrap15", 
@@ -294,7 +299,7 @@ plotReducedDim(sce,
 ```
 
 
-```{r, fig.width=10, fig.height=6}
+```{r plot_tsne_walktrap_k15_samplegroup, fig.width=10, fig.height=6}
 plotReducedDim(sce, 
                dimred = "TSNE_corrected",
                colour_by="walktrap15", 
@@ -330,20 +335,21 @@ article](https://www.nature.com/articles/s41598-019-41695-z#Fig1).
 We now apply the Louvain approach, store its outcome in the SCE object and show
 cluster sizes.
 
-```{r cluster_louvain}
+```{r clustercells_louvain_k15}
 sce$louvain15 <- clusterCells(sce, 
                            use.dimred = "corrected", 
-                           BLUSPARAM = SNNGraphParam(k = 15, cluster.fun = "louvain"))
+                           BLUSPARAM = SNNGraphParam(k = 15, 
+                                                     cluster.fun = "louvain"))
 ```
 
 
-```{r}
+```{r table_clusters_louvain_k15}
 table(sce$louvain15)
 ```
 
 The t-SNE plot shows cells color-coded by cluster membership:
 
-```{r show_louvain_tsne_1, fig.height=6, fig.width=8}
+```{r plot_tsne_louvain_k15, fig.height=6, fig.width=8}
 plotReducedDim(sce, 
                dimred = "TSNE_corrected",
                colour_by = "louvain15", 
@@ -353,7 +359,7 @@ plotReducedDim(sce,
 If we split by sample type we can see differences in the clusters between the
 sample groups:
 
-```{r show_louvain_tsne_2, fig.width=10, fig.height=6}
+```{r plot_tsne_louvain_k15_samplegroup, fig.width=10, fig.height=6}
 plotReducedDim(sce, 
                dimred = "TSNE_corrected",
                colour_by="louvain15", 
@@ -375,7 +381,7 @@ article](https://www.nature.com/articles/s41598-019-41695-z#Fig3).
 
 :::exercise
 
-For this exercise please run the clustering again, this time using the "leiden",
+For this exercise please run the clustering again, this time using the "leiden"
 method.
 
 Set the *k* to *20* and add the results of the clustering to the `sce` object
@@ -397,7 +403,7 @@ in the SNNGraphParam object used in the `clusterCells` function.
 
 First run the clustering with `clusterCells`:
 
-```{r}
+```{r exercise_1_answer_a, purl=FALSE}
 sce$leiden20 <- clusterCells(sce, 
                            use.dimred = "corrected", 
                            BLUSPARAM = SNNGraphParam(k = 20, 
@@ -406,15 +412,16 @@ sce$leiden20 <- clusterCells(sce,
 
 We can quickly look at the results by summarising using `table`.
 
-```{r}
+```{r exercise_1_answer_b, purl=FALSE}
 table(sce$leiden20)
 ```
 
-There are 11 clusters, although cluster 6 contains only 1 cell.
+There are `r max(as.numeric(sce$leiden20))` clusters, although cluster 7
+contains only 3 cells and cluster 8 contains only 1 cell.
 
 The t-SNE plot shows cells color-coded by cluster membership:
 
-```{r show_leiden_tsne_1, fig.height=6, fig.width=8}
+```{r exercise_1_answer_c, purl=FALSE, fig.height=6, fig.width=8}
 plotReducedDim(sce, 
                dimred = "TSNE_corrected",
                colour_by = "leiden20", 
@@ -455,7 +462,7 @@ We will use the `approxSilhouette` function from the *bluster* package. The
 resulting table gives us the silhouette width for each cell, the cluster it
 belongs to, and which other cluster it is most closely related to.
 
-```{r}
+```{r calculate_silhouette_widths}
 sil.approx <- approxSilhouette(reducedDim(sce, "corrected"),
                                clusters=sce$leiden20)
 sil.approx
@@ -465,7 +472,7 @@ We can view the results in as a beeswarm plot. We colour each cell according to
 either its current cluster or, if the cell has a negative silhouette width, the
 cluster that it is closest to.
 
-```{r fig.width=14, fig.height=6}
+```{r silhouette_width_beeswarm, fig.width=14, fig.height=6}
 plotSilBeeswarm <- function(silDat){
   silTab <- silDat %>% 
     as.data.frame() %>% 
@@ -477,6 +484,7 @@ plotSilBeeswarm <- function(silDat){
         theme_bw()
   
   plt <- scater:::.resolve_plot_colours(plt, silTab$closestCluster, "closestCluster")
+  plt
 }
 
 p1 <- plotSilBeeswarm(sil.approx)
@@ -494,7 +502,7 @@ total cells in the cluster that it contains. Ideally we would like to see a
 strong diagonal band and only a few off-diagonal tiles containing small number
 of cells.
 
-```{r}
+```{r silhouette_width_grid}
 plotSilGrid <- function(silDat){
   silDat %>% 
     as.data.frame() %>% 
@@ -518,17 +526,14 @@ plotSilGrid <- function(silDat){
 }
 plotSilGrid(sil.approx)
 ```
-From these two plots we can see that clusters 5 and 6 appear to have a good
-degree of separation, however, cluster 6 only contains 1 cell, whilst there are
-49 cells in other clusters that appear closer to it than they are to their
-assigned cluster. Perhaps cluster 6 needs to be merged with cluster 2. In
-contrast, clusters 1 and 2 have a large number of cells that appear to be closer
-to cluster 3. It is possible clusters 1-3 contain a degree of heterogeneity that
-suggests further splitting of these clusters may be required.
+From these two plots we can see that clusters 7, 8 and 12 appear to have a good
+degree of separation, however, clusters 7 and 8 only contains few cells, whilst there are
+many cells in other clusters that appear closer to them than they are to their
+assigned cluster. Perhaps clusters 7 and 8 needs to be merged with cluster 1. 
 
 Let's do the same plots with the walktrap clusters generated with *k*=15.
 
-```{r, fig.width=18, fig.height=6}
+```{r plot_silhouette_width_walktrap_k15, fig.width=18, fig.height=6}
 sil.approx <- approxSilhouette(reducedDim(sce, "corrected"),
                                clusters=sce$walktrap15)
 
@@ -544,12 +549,12 @@ wp3 <- plotSilGrid(sil.approx)
 wp1 + wp2 + wp3
 ```
 
-This clustering appears to have generated a set of clusters with better
+This clustering appears to have generated a set of clusters with slightly better
 separatedness than the Leiden method with a *k* of 20.
 
-And again with the louvain clusters
+And again with the louvain clusters:
 
-```{r, fig.width=18, fig.height=6}
+```{r plot_silhouette_width_louvain_k15, fig.width=18, fig.height=6}
 sil.approx <- approxSilhouette(reducedDim(sce, "corrected"),
                                clusters=sce$louvain15)
 
@@ -583,10 +588,11 @@ will rerun the walktrap clustering with k=15 to obtain this. We can plot the
 resulting ratios on a heatmap. We would expect the highest modularity values
 to be on the diagonal.
 
-```{r, fig.height=5, fig.width=6}
+```{r pairwise_modularity, fig.height=5, fig.width=6}
 walktrap15 <- clusterCells(sce, 
                            use.dimred = "corrected", 
-                           BLUSPARAM = SNNGraphParam(k = 15, cluster.fun = "walktrap"),
+                           BLUSPARAM = SNNGraphParam(k = 15, 
+                                                     cluster.fun = "walktrap"),
                            full = TRUE)
 g <- walktrap15$objects$graph
 ratio <- pairwiseModularity(g, walktrap15$clusters, as.ratio=TRUE)
@@ -597,20 +603,20 @@ hm1 <- pheatmap(log2(ratio+1),
          color=colorRampPalette(c("white", "blue"))(100))
 ```
 
-We can compare this to the silhuoette width grid
+We can compare this to the silhouette width grid
 
-```{r, fig.width=12, fig.height=6}
+```{r plot_modularity_v_silhouette_widths, fig.width=12, fig.height=6}
 wp4 <- ggplotify::as.ggplot(hm1)
 wp2 + wp3 + wp4
 ```
 
 
 Largely, this reflects what we saw from the silhouette widths, but also reveals
-some additional inter-connectedness between other clusters e.g. cluster 3 and
-cluster 8. We can also visualise this as network graph where nodes are clusters
-and the edge weights are the modularity.
+some additional inter-connectedness between other clusters. We can also
+visualise this as network graph where nodes are clusters and the edge weights
+are the modularity.
 
-```{r}
+```{r plot_modularity_network}
 cluster.gr <- igraph::graph_from_adjacency_matrix(log2(ratio+1),
                                                   mode="upper", 
                                                   weighted=TRUE, diag=FALSE)
@@ -633,18 +639,18 @@ the underlying biology. We will use the Jaccard index as measure of concordance
 between clusters. A value of 1 represents perfect concordance between clusters
 (i.e. they contain exactly the same cells).
 
-```{r fig.width=6, fig.height=4}
+```{r jaccard_index, fig.width=6, fig.height=4}
 jacc.mat <- linkClustersMatrix(sce$louvain15, sce$walktrap15)
 rownames(jacc.mat) <- paste("Louvain", rownames(jacc.mat))
 colnames(jacc.mat) <- paste("Walktrap", colnames(jacc.mat))
 pheatmap(jacc.mat, color=viridis::viridis(100), cluster_cols=FALSE, cluster_rows=FALSE)
 ```
 
-We can see that Louvain clusters 4, 5, 6 and 7 are equivalent to walktrap
-clusters 12, 10, and 4. The remaining Louvain clusters are combinations of
-cells from various walktrap clusters. We may want to look at marker genes for
-these clusters to assess what these two different views are telling us about the
-biology.
+We can see that Louvain clusters 2, 6, 7, and 9 are equivalent to walktrap
+clusters 14, 7, 12, and 11 respectively. The remaining Louvain clusters are
+combinations of cells from various walktrap clusters. We may want to look at
+marker genes for these clusters to assess what these two different views are
+telling us about the biology.
 
 # Cluster sweep
 
@@ -660,7 +666,7 @@ clustering for each.
 For example, suppose we wish to assess the effect of different values of *k* on
 the walktrap clustering. We can parallelize this process to make it faster.
 
-```{r}
+```{r clustersweep}
 out <- clusterSweep(reducedDim(sce, "corrected"),
                     BLUSPARAM = NNGraphParam(),
                     k = as.integer(c(5, 10, 15, 20, 25)),
@@ -672,7 +678,7 @@ The resulting object is list containing a DataFrame with the clusters for each
 combination of the clustering parameters and a corresponding DataFrame showing
 the parameters used to generate each of these:
 
-```{r}
+```{r clustersweep_output}
 out$clusters[,1:4]
 out$parameters
 ```
@@ -684,7 +690,7 @@ we may wish to investigate further.
 
 Here we will just look at the mean silhouette width and the number of clusters.
 
-```{r}
+```{r assess_clustersweep}
 df <- as.data.frame(out$parameters)
 
 # get the number of clusters
@@ -705,20 +711,24 @@ nclPlot + silPlot
 ```
 
 Based on our previous analysis and knowledge of the biology we may feel that 12
-clusters represents a good number clusters, but we can see here that *k* = 15,
-ahd *k* = 20 provide this, but *k* = 20 gives us a slightly better silhouette
-score. On the other hand, perhaps *k* = 10 provides greater resolution of cell
-types, with more clusters with only a slight decrease in the silhouette score.
+clusters represents a good number clusters, and we can see here that *k* = 25,
+provides this. Also *k* = 25 gives us a better silhouette score than lower
+values of *k*. On the other hand, perhaps *k* = 15 provides greater resolution
+of cell types (more clusters) with only a slight decrease in the silhouette
+score.
 
 Earlier we looked at the Jaccard index as a means of comparing two different
 clusterings. We could apply the same method here:
 
-```{r fig.width=5, fig.height=5}
-jacc.mat <- linkClustersMatrix(out$clusters$k.10_cluster.fun.walktrap, 
-                               out$clusters$k.15_cluster.fun.walktrap)
-rownames(jacc.mat) <- paste("Walktrap_10", rownames(jacc.mat))
-colnames(jacc.mat) <- paste("Walktrap_15", colnames(jacc.mat))
-pheatmap(jacc.mat, color=viridis::viridis(100), cluster_cols=FALSE, cluster_rows=FALSE)
+```{r clustersweep_jaccard_index, fig.width=5, fig.height=5}
+jacc.mat <- linkClustersMatrix(out$clusters$k.15_cluster.fun.walktrap, 
+                               out$clusters$k.25_cluster.fun.walktrap)
+rownames(jacc.mat) <- paste("Walktrap_15", rownames(jacc.mat))
+colnames(jacc.mat) <- paste("Walktrap_25", colnames(jacc.mat))
+pheatmap(jacc.mat, 
+         color = viridis::viridis(100), 
+         cluster_cols = FALSE, 
+         cluster_rows = FALSE)
 ```
 
 The [OSCA
@@ -742,7 +752,7 @@ This will test 12 different clusterings.
 
 <details><summary>Hint</summary>
 
-This time, as well as setting the `k` parameter to a vector that contains 10,
+This time, as well as setting the *k* parameter to a vector that contains 10,
 15, 20 and 25, you will also need to provide the `cluster.fun` parameter with a
 vector containing the names of the three different clustering methods.
 
@@ -750,7 +760,7 @@ vector containing the names of the three different clustering methods.
 
 <details><summary>Answer</summary>
 
-```{r}
+```{r exercise_2a_answer, purl=FALSE}
 out <- clusterSweep(reducedDim(sce, "corrected"),
                     BLUSPARAM = NNGraphParam(),
                     k = as.integer(c(10, 15, 20, 25)),
@@ -760,11 +770,12 @@ out <- clusterSweep(reducedDim(sce, "corrected"),
 
 </details>
 
-Now plot the number of clusters generated by each clustering and the mean silhouette width.
-You will need to adjust the plotting parameters to plot a different coloured line for each
-clustering algorithm (walktap, louvain and leiden).
+Now plot the number of clusters generated by each clustering and the mean
+silhouette width. You will need to adjust the plotting parameters to plot a
+different coloured line for each clustering algorithm (walktap, louvain and
+leiden).
 
-```{r eval=FALSE}
+```{r exercise_2b_start_code, purl=FALSE, eval=FALSE}
 df <- as.data.frame(out$parameters)
 
 # get the number of clusters
@@ -791,7 +802,7 @@ This will instruct ggplot2 to plot a different coloured line for clustering func
 
 <details><summary>Answer</summary>
 
-```{r}
+```{r exercise_2b_answer, purl=FALSE}
 df <- as.data.frame(out$parameters)
 
 # get the number of clusters
@@ -825,11 +836,12 @@ object in the `out` list generated by `clusterSweep`.
 
 <details><summary>Answer</summary>
 
-For example, we could take a look at the louvain with k = 10.
+For example, we could take a look at the leiden with k = 25, which results in 12
+clusters and has the highest mean silhouette width.
 
-```{r }
+```{r exercise_2_bonus_answer, purl=FALSE}
 sil.approx <- approxSilhouette(reducedDim(sce, "corrected"), 
-                               clusters=out$clusters$k.10_cluster.fun.louvain)
+                               clusters=out$clusters$k.25_cluster.fun.leiden)
 
 plotSilBeeswarm(sil.approx)
 
@@ -842,7 +854,7 @@ plotSilGrid(sil.approx)
 Finally, we can add all (or a subset) of the clusterings from `clusterSweep` to
 our SCE object.
 
-```{r}
+```{r add_clustersweep_output_to_sce}
 colData(sce) <- cbind(colData(sce), DataFrame(out$clusters))
 ```
 
@@ -855,10 +867,10 @@ This means downstream code does not need to be changed should you later decide
 to switch to a different clustering (and makes the code easily re-usable for 
 different analyses).
 
-For now we will use the walktrap k=20 clustering.
+For now we will use the Leiden k=25 clustering.
 
-```{r}
-colLabels(sce) <- sce$k.20_cluster.fun.walktrap
+```{r set_labels}
+colLabels(sce) <- sce$k.25_cluster.fun.leiden
 ```
 
 
@@ -869,12 +881,12 @@ well established marker genes, we can now start to investigate the clusters
 by plotting in parallel the expression of these genes. This can also help us
 in assessing if our clustering has satisfactorily partitioned our cells.
 
-```{r, fig.height=6, fig.width=8}
+```{r plot_tsne_leiden_k25, fig.height=6, fig.width=8}
 plotReducedDim(sce, 
                dimred = "TSNE_corrected",
                colour_by = "label", 
                text_by = "label") +
-  ggtitle("Walktrap clusters")
+  ggtitle("Leiden k=25 clusters")
 ```
 
 Having identified clusters, we now display the level of expression of cell type
@@ -886,13 +898,13 @@ We will be using gene symbols to identify the marker genes, so we will switch
 the rownames in the SCE object to be gene symbols. We use the scater function
 `uniquifyFeatureNames` to do this as there are a few duplicated gene symbols.
 
-```{r}
+```{r symbols_to_rownames}
 rownames(sce) <- uniquifyFeatureNames(rowData(sce)$ID, rowData(sce)$Symbol)
 ```
 
 ## B-cells markers
 
-```{r fig.height=6, fig.width=12}
+```{r plot_tsne_b_cell_markers, fig.height=6, fig.width=12}
 p1 <- plotReducedDim(sce, 
                dimred = "TSNE_corrected", 
                by_exprs_values = "logcounts",
@@ -906,7 +918,7 @@ p2 <- plotReducedDim(sce,
 p1 + p2
 ```
 
-```{r fig.height=6, fig.width=12}
+```{r plot_expression_b_cell_markers, fig.height=6, fig.width=12}
 plotExpression(sce, 
                exprs_values = "logcounts",
                x = "label", 
@@ -916,7 +928,7 @@ plotExpression(sce,
 
 ## Monocyte markers
 
-```{r fig.height=6, fig.width=12}
+```{r plot_tsne_monocyte_markers, fig.height=6, fig.width=12}
 p1 <- plotReducedDim(sce, 
                dimred = "TSNE_corrected",
                by_exprs_values = "logcounts",
@@ -930,7 +942,7 @@ p2 <- plotReducedDim(sce,
 p1 + p2
 ```
 
-```{r fig.height=6, fig.width=12}
+```{r plot_expression_monocyte_markers, fig.height=6, fig.width=12}
 plotExpression(sce, 
                exprs_values = "logcounts",
                x = "label", 
@@ -940,7 +952,7 @@ plotExpression(sce,
 
 ## Dendritic cell markers
 
-```{r fig.height=6, fig.width=12}
+```{r plot_tsne_dendritic_cell_markers, fig.height=6, fig.width=12}
 p1 <- plotReducedDim(sce, 
                dimred = "TSNE_corrected",
                by_exprs_values = "logcounts",
@@ -954,7 +966,7 @@ p2 <- plotReducedDim(sce,
 p1 + p2
 ```
 
-```{r fig.height=6, fig.width=12}
+```{r plot_expression_dendritic_cell_markers, fig.height=6, fig.width=12}
 plotExpression(sce, 
                exprs_values = "logcounts",
                x = "label", 
@@ -967,14 +979,14 @@ plotExpression(sce,
 
 Write SCE object to file.
 
-```{r}
-saveRDS(sce, file="Robjects/Caron_clustering_material.rds")
+```{r save_object, purl=FALSE, eval=FALSE}
+saveRDS(sce, file="results/Caron_clustering_material.rds")
 ```
 
 ## Session information
 
 <details>
-```{r}
+```{r session_info, purl=FALSE}
 sessionInfo()
 ```
 </details>
