@@ -62,7 +62,7 @@ common gene names instead of Ensembl IDs. This was done using the
 `uniquifyFeatureNames()` function makes this safely, avoiding duplicate gene
 names.
 
-```{r look_at_rownames}
+```{r look_at_rownames, purl=FALSE}
 rownames(sce)[11:20]
 ```
 
@@ -90,7 +90,11 @@ plotReducedDim(sce,
                text_by = "label")
 ```
 
-Our objective is to identify genes that distinguish between these clusters.
+Our objective is to identify genes that distinguish these clusters from one
+another - "cluster marker genes". Intuitively we hope that the clusters relate
+to specific cell populations, and therefore we are trying to find genes that
+will allow us to identify the cell types for each cluster.
+
 For example genes such as the "CST3" gene, which is a known monocyte marker:
 
 ```{r cst3_umap}
@@ -112,7 +116,7 @@ values for differential expression between clusters**. This is because data
 integration algorithms bring cells together based on their overall gene
 expression, but for each gene individually the data transformation may introduce
 artificial agreement between batches, which is not ideal for gene-level
-differential analysis. Furthermore, the severity of these biases id dependent on
+differential analysis. Furthermore, the severity of these biases is dependent on
 the parameters used for data integration (such as the number of nearest
 neighbours in the `fastMNN()` method).
 
@@ -131,11 +135,11 @@ statistical tests for each gene between every pair of clusters. The
 `scoreMarkers` function can do this for us, while accounting for known factors
 (aka "blocking factors" or "blocks"), such as sample batch. 
 
-The function outputs a _list_ of `DataFrames`, one for each cluster compared to
-all others. However, note that the blocking assumes that each pair of clusters
-is present in at least one of the blocks. If there are two clusters which are
-not both present in at least one block (in our cases Samples), then that
-pairwise comparison will by necessity be omitted.
+The `scoreMarkers` function outputs a _list_ of `DataFrames`, one for each
+cluster compared to all others. However, note that the blocking assumes that
+each pair of clusters is present in at least one of the blocks. If there are two
+clusters which are not both present in at least one block (in our cases
+Samples), then that pairwise comparison will by necessity be omitted.
 
 By default the `scoreMarkers` function will use the log normalised counts as
 stored in the "logcounts" assay slot of the single cell object.
@@ -147,7 +151,7 @@ markers <- scoreMarkers(sce,
 ```
 
 The returned object is a list of the same length as the number of clusters. We 
-can access the results of a particular cluster thus:
+can access the results for a particular cluster thus:
 
 ```{r score_markers_results_cluster_10}
 c10_markers <- as.data.frame(markers[["10"]])
@@ -233,7 +237,7 @@ any pairwise comparison. This will ensure we get at least 5 genes that
 distinguish the cluster of interest from all other clusters.
 
 For example using the min-rank for Cohen's *d* on cluster 10 yields 20 marker
-genes:
+genes: 
 
 ```{r top_genes_cluster_10}
 c10_markers %>% 
@@ -247,7 +251,7 @@ expression of _CST3_ and _TYROBP_, for example.
 
 We can visualise the expression of some of the other top-ranked genes: 
 
-```{r plot_UMAP_LYZ}
+```{r plot_UMAP_LYZ, fig.width=12}
 p1 <- plotReducedDim(sce, 
                      dimred = "UMAP_corrected",
                      colour_by = "LYZ", 
@@ -274,6 +278,7 @@ plotExpression(sce,
                features = "CD3D", 
                x = "label")
 ```
+
 We would like to confirm this by identifying other genes that differentiate
 these two clusters from the rest of the cells.
 
@@ -325,7 +330,7 @@ AND
 * have a Cohen's _d_ in the top 10 (i.e. the average expression difference
 should be high, relative to the gene's variance)
 
-```{r exercise_1_answer_b_n_genes}
+```{r exercise_1_answer_b_n_genes, purl=FALSE}
 lenHit <- c5_markers %>% 
   filter(rank.logFC.detected <= 2 & rank.logFC.cohen <= 10) %>%
   nrow()
