@@ -8,6 +8,8 @@ library(pheatmap)
 library(patchwork)
 library(tidyverse)
 
+setwd("~/Course_Materials")
+
 # load data 
 sce <- readRDS("R_objects/Caron_batch_corrected.500.rds")
 
@@ -90,5 +92,6 @@ plotSilGrid <- function(silDat){
           panel.background = element_blank())
 }
 
+YOUR CODE HERE 
 
 ################################################################################

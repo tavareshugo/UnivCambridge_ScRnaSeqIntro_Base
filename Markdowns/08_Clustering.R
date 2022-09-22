@@ -8,6 +8,8 @@ library(pheatmap)
 library(patchwork)
 library(tidyverse)
 
+setwd("~/Course_Materials")
+
 # load data 
 sce <- readRDS("R_objects/Caron_batch_corrected.500.rds")
 
@@ -91,7 +93,6 @@ plotReducedDim(sce,
 # calculate silhouette widths 
 sil.approx <- approxSilhouette(reducedDim(sce, "corrected"),
                                clusters=sce$leiden20)
-sil.approx
 
 
 # silhouette width beeswarm 
@@ -238,11 +239,6 @@ silPlot <- ggplot(df, aes(x = k, y = silhouette)) +
                   geom_line(lwd=2)
 nclPlot + silPlot
 
-## -- Exercise 2 -- ############################################################
-
-
-################################################################################
-
 # clusterSweep Jaccard index 
 jacc.mat <- linkClustersMatrix(out$clusters$k.15_cluster.fun.walktrap, 
                                out$clusters$k.25_cluster.fun.walktrap)
@@ -252,6 +248,11 @@ pheatmap(jacc.mat,
          color = viridis::viridis(100), 
          cluster_cols = FALSE, 
          cluster_rows = FALSE)
+
+## -- Exercise 2 -- ############################################################
+
+
+################################################################################
 
 # add_clusterSweep output to sce 
 colData(sce) <- cbind(colData(sce), DataFrame(out$clusters))
