@@ -305,7 +305,7 @@ plotReducedDim(sce,
                colour_by="walktrap15", 
                text_by = "walktrap15",
                other_fields = list("SampleGroup")) +
-  facet_wrap("SampleGroup")
+  facet_wrap(vars(SampleGroup))
 ```
 
 ## Additional clustering parameters (Advanced)
@@ -365,7 +365,7 @@ plotReducedDim(sce,
                colour_by="louvain15", 
                text_by = "louvain15",
                other_fields = list("SampleGroup")) +
-  facet_wrap("SampleGroup")
+   facet_wrap(vars(SampleGroup))
 ```
 
 # The Leiden method
