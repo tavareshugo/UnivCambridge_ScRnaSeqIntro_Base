@@ -4,6 +4,7 @@ library(scran)
 library(pheatmap)
 library(tidyverse)
 
+setwd("~/Course_Materials")
 
 # Load data 
 sce <- readRDS("R_objects/Caron_clustered.500.rds")
