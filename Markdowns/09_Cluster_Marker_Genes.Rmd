@@ -47,6 +47,7 @@ library(scater)
 library(scran)
 library(pheatmap)
 library(tidyverse)
+library(patchwork)
 ```
 
 We will use the data set generated in the clustering session. This contains 7
@@ -330,7 +331,7 @@ AND
 * have a Cohen's _d_ in the top 10 (i.e. the average expression difference
 should be high, relative to the gene's variance)
 
-```{r exercise_1_answer_b_n_genes, purl=FALSE}
+```{r exercise_1_answer_b_n_genes, echo=FALSE, purl=FALSE}
 lenHit <- c5_markers %>% 
   filter(rank.logFC.detected <= 2 & rank.logFC.cohen <= 10) %>%
   nrow()
@@ -341,7 +342,7 @@ We obtain `r lenHit` genes with these criteria:
 
 ```{r exercise_1_answer_b, purl=FALSE}
 top_genes <- c5_markers %>% 
-  filter(rank.logFC.detected <= 3 & rank.logFC.cohen <= 10)
+  filter(rank.logFC.detected <= 2 & rank.logFC.cohen <= 10)
 top_genes
 ```
 
@@ -352,6 +353,7 @@ plotExpression(sce,
                features = rownames(top_genes), 
                x = "label")
 ```
+
 We can see all these genes except _BACH2_ behave in a similar way to our known
 marker _CD3D_, suggesting they are good markers for these cell types. This makes
 sense as _CD3D_ and _CD3E_ encode T cell surface proteins.
@@ -393,7 +395,9 @@ plotHeatmap(sce,
 
 Alternatively, we can summarise the expression across sample goups and generate
 a heatmap showing the average expression across cells within each group using
-the function `plotGroupedHeatmap()`.
+the function `plotGroupedHeatmap()`. We can specify any factors causing batch
+effects using the `block` arguments and the batch effects will be regressed out
+of the averages.
 
 ```{r cluster_10_heatmap_by_block}
 plotGroupedHeatmap(sce, 
