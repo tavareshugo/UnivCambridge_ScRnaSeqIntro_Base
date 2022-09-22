@@ -3,7 +3,9 @@ library(scater)
 library(scran)
 library(pheatmap)
 library(tidyverse)
+library(patchwork)
 
+setwd("~/Course_Materials")
 
 # Load data 
 sce <- readRDS("R_objects/Caron_clustered.500.rds")
@@ -39,7 +41,6 @@ markers <- scoreMarkers(sce,
 
 # Score markers results for cluster 10 
 c10_markers <- as.data.frame(markers[["10"]])
-head(c10_markers)
 
 ## Selecting top marker genes
 
@@ -107,8 +108,6 @@ plotGroupedHeatmap(sce,
 c12_top_markers <- markers[["12"]] %>% 
   as.data.frame() %>% 
   filter(rank.logFC.cohen <= 2)
-c12_top_markers
-
 
 # c12 flt3 expression 
 c12_top_markers["FLT3", ] %>%
