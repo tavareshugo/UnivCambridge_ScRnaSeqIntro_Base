@@ -1,7 +1,6 @@
 ---
 title: "Clustering"
-author: "Ashley Sawle"
-date: 'April 2022'
+date: 'September 2022'
 output:
   ioslides_presentation:
     widescreen: true
@@ -137,7 +136,7 @@ Node similarity is measured based on these walks.
 
 <!-- https://link.springer.com/article/10.1007/s11227-019-03018-x -->
 
-## Walktrap
+## Walktrap  {#less_space_after_title}
 
 Network example:
 
