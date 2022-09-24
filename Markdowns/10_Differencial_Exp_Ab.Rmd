@@ -55,6 +55,9 @@ Load the SCE object:
 ```{r, message=FALSE}
 # Read object in:
 sce <- readRDS("R_objects/Caron_clustered.PBMMCandETV6RUNX1.rds")
+
+rownames(sce) <- uniquifyFeatureNames(rownames(sce), rowData(sce)$Symbol)
+
 sce
 ```
 
@@ -232,7 +235,7 @@ summed.filt$SampleGroup <- factor(summed.filt$SampleGroup)
 de.results <- pseudoBulkDGE(summed.filt, 
     label = summed.filt$label,
     design = ~SampleGroup,
-    coef = "DatasetPBMMC",
+    coef = "SampleGroupPBMMC",
     condition = summed.filt$SampleName
 )
 ```
@@ -287,7 +290,7 @@ sizeFactors(summed.filt) <- NULL
 
 plotExpression(logNormCounts(summed.filt), 
     features=rownames(de.inspec[[cx]])[1],
-    x="Sample", colour_by="Sample", 
+    x="SampleName", colour_by="SampleName", 
     other_fields="label") + 
     facet_wrap(~label) +
   ggtitle(glue::glue("{cx}: {rownames(de.inspec[[cx]])[1]}"))
@@ -296,25 +299,27 @@ plotExpression(logNormCounts(summed.filt),
 
 ## Exercise 1
 
-Identify label-specific DE genes that are significant in 'c10' yet not DE in any other label.
+Rerun the differential expression analysis using the PRE-T and HHD samples.
 
-Plot the top-ranked gene for inspection.
+Which cluster has the mot DEGs?
+
+Which genes are significantly DE in that cluster and not in any other?
 
 
 ### Differences between celltypes
 
 The above example of differential expression focused on testing for differences in expression between conditions for the same cell type or label. However, the same methodology can be applied to test for differences between cell types across samples. This kind of DE analysis can overcome a lack of suitable replication.  
 
-```{r}
-summed.sub <- summed[,summed$Cluster %in% c("3", "4")]
-
 # Using a dummy value for the label to allow us to include multiple cell types
 # in the fitted model; otherwise, each cell type will be processed separately.
 
+```{r}
+summed.sub <- summed[,summed$label %in% c("3", "4")]
+
 between.res <- pseudoBulkDGE(summed.sub,
     label=rep("dummy", ncol(summed.sub)),
-    design=~factor(Sample) + factor(Cluster),
-    coef="factor(Cluster)4")[[1]]
+    design=~factor(SampleName) + factor(label),
+    coef="factor(label)4")[[1]]
 
 table(Sig=between.res$FDR <= 0.05, Sign=sign(between.res$logFC))
 
@@ -328,12 +333,11 @@ between.res[order(between.res$PValue),]
 summed.sub <- logNormCounts(summed.sub, size.factors=NULL)
 plotExpression(summed.sub, 
     features=head(rownames(between.res)[order(between.res$PValue)]),
-    x="Cluster", 
-    colour_by=I(factor(summed.sub$Sample)))
+    x="label", 
+    colour_by=I(factor(summed.sub$SampleName)))
 ```
 
 Whether or not this is a scientifically meaningful comparison depends on the nature of the labels. These particular labels were defined by clustering, which means that the presence of DEGs is a foregone conclusion. Nonetheless, it may have some utility for applications where the labels are defined using independent information, e.g., from FACS.
-
 
 
 ## Differential abundance between conditions
@@ -342,51 +346,67 @@ Whether or not this is a scientifically meaningful comparison depends on the nat
 
 In a DA analysis, we test for significant changes in per-label cell abundance across conditions. This will reveal which cell types are depleted or enriched upon treatment, which is arguably just as interesting as changes in expression within each cell type. The DA analysis has a long history in flow cytometry (Finak et al. 2014; Lun, Richard, and Marioni 2017) where it is routinely used to examine the effects of different conditions on the composition of complex cell populations. By performing it here, we effectively treat scRNA-seq as a “super-FACS” technology for defining relevant subpopulations using the entire transcriptome.
 
-plotTSNE(corrected, colour_by = "k.80_cluster.fun.louvain")
+```{r}
+
+plotReducedDim(sce, dimred = "TSNE_corrected", colour_by = "label")
 
 ```
+
+Milo object, need to add PCA, extra slots for milo stuff.
 
 ```{r}
 library(miloR)
 
-milo <- Milo(corrected)
-milo <- runPCA(milo)
+milo <- Milo(sce)
 
 milo
 ```
 
+importance of K and D
+
 ```{r}
+
 milo <- buildGraph(milo, k = 60, d = 30, reduced.dim = "corrected", BPPARAM = MulticoreParam(7))
 ```
 
+importance of K and D
 ```{r}
+
 milo <- makeNhoods(milo, prop = 0.1, k = 60, d=30, refined = TRUE)
 ```
 
+Want peak to be greater than 5 x number of samples. Or between 50 and 100...
+
 ```{r}
+
 plotNhoodSizeHist(milo)
 ```
 
 ```{r}
+
 milo <- countCells(milo, meta.data = data.frame(colData(milo)), sample="SampleName")
 
 head(nhoodCounts(milo))
 ```
 
 ```{r}
-design <- data.frame(colData(milo))[,c("SampleName", "SampleGroup")]
-design <- distinct(design)
-rownames(design) <- design$SampleName
 
-design
+milo_design <- data.frame(colData(milo))[,c("SampleName", "SampleGroup")]
+milo_design <- distinct(milo_design)
+rownames(milo_design) <- milo_design$SampleName
+
+milo_design
+```
+Importance of D and defaults here
+
+```{r}
+
+milo <- calcNhoodDistance(milo, d=30, reduced.dim = "corrected")
 ```
 
 ```{r}
-milo <- calcNhoodDistance(milo, d=30)
-```
 
-```{r}
-da_results <- testNhoods(milo, design = ~ SampleGroup, design.df = design)
+da_results <- testNhoods(milo, design = ~ SampleGroup, design.df = milo_design)
 
 da_results %>%
   arrange(SpatialFDR) %>%
@@ -394,6 +414,7 @@ da_results %>%
 ```
 
 ```{r}
+
 ggplot(da_results, aes(PValue)) + geom_histogram(bins=50)
 ```
 
@@ -408,28 +429,40 @@ ggplot(da_results, aes(logFC, -log10(SpatialFDR))) +
 ```{r}
 milo <- buildNhoodGraph(milo)
 
-plotUMAP(milo, colour_by = "k.80_cluster.fun.louvain", text_by = "k.80_cluster.fun.louvain") + plotNhoodGraphDA(milo, da_results, alpha=0.05) +
+```
+
+Has to be called UMAP. Explain plot.
+
+```{r}
+reducedDim(milo, "UMAP") <- reducedDim(milo, "UMAP_corrected")
+milo
+
+plotUMAP(milo, colour_by = "label", text_by = "label") + plotNhoodGraphDA(milo, da_results, alpha=0.05) +
   plot_layout(guides="collect")
 ```
 
+Explain label fraction.
+
 ```{r}
-da_results <- annotateNhoods(milo, da_results, coldata_col = "k.80_cluster.fun.louvain")
+da_results <- annotateNhoods(milo, da_results, coldata_col = "label")
 head(da_results)
 ```
 
 ```{r}
-ggplot(da_results, aes(k.80_cluster.fun.louvain_fraction)) + geom_histogram(bins=50)
+ggplot(da_results, aes(label_fraction)) + geom_histogram(bins=50)
 ```
 
 ```{r}
-da_results$k.80_cluster.fun.louvain <- ifelse(da_results$k.80_cluster.fun.louvain_fraction < 0.7, "Mixed", da_results$k.80_cluster.fun.louvain)
+da_results$label <- ifelse(da_results$label_fraction < 0.7, "Mixed", da_results$label)
 
 da_results
 ```
 
 ```{r}
-plotDAbeeswarm(da_results, group.by = "k.80_cluster.fun.louvain")
+plotDAbeeswarm(da_results, group.by = "label")
 ```
+
+### Grouping Neighbourhoods
 
 ```{r}
 da_results <- groupNhoods(milo, da_results, max.lfc.delta = 10)
