@@ -252,7 +252,7 @@ We construct a common design matrix that will be used in the analysis for each l
 
 ```{r get_common_metadata}
 
-targets <- colData(sce)[!duplicated(corrected$SampleName),] %>%
+targets <- colData(sce)[!duplicated(sce$SampleName),] %>%
   data.frame()
 ```
 
@@ -346,7 +346,7 @@ for the exercise. We want to achieve the following:
 
 - Determine which genes are significantly DE in that cluster and not in any other?
 
-```{r}
+```{r exercise1, eval=FALSE}
 # First load in the other two sample groups
 sce_PRET_HHD <- readRDS("R_objects/Caron_clustered.PRETandHHD.rds")
 
@@ -357,31 +357,37 @@ rownames(sce_PRET_HHD) <- uniquifyFeatureNames(rownames(sce_PRET_HHD), rowData(s
 sce_PRET_HHD
 
 # Part A
-# 
+# Re run the analysis using these new samples.
+
+FIXME
+
+# Part B
+# Looking at your results, which cluster has the most DEGs?
+
+FIXME
+
+# Part C
+# Which genes are sig. DE in that cluster and not the others?
+
+FIXME
 
 ```
 
 <details><summary>Hint A</summary>
 
-Look at the set.seed() function
+You can copy and paste from the previous code and just change which object is used.
 
 </details>
 
 <details><summary>Hint B</summary>
 
-You can replace what we colour by with any of the gene names in our dataset as they are stored as the rownames in our object.
+You will need to run pseudoBulkDGE to get the results for all the clusters at once.
 
 </details>
 
 <details><summary>Hint C</summary>
 
-The function facet_wrap() can be used to modify ggplots as we did earlier.
-
-</details>
-
-<details><summary>Hint D</summary>
-
-You can replace values in the perplexity argument of the runTSNE() function.
+You can copy and paste this code from earlier too, but remember to replace the number of the cluster with the one you found in Part B.
 
 </details>
 
@@ -389,22 +395,59 @@ You can replace values in the perplexity argument of the runTSNE() function.
 
 Here is the complete script: 
 
-```{r}
+```{r exercise1_solution, eval=FALSE}
+# First load in the other two sample groups
+sce_PRET_HHD <- readRDS("R_objects/Caron_clustered.PRETandHHD.rds")
+
+# replace the ensembl IDs with gene symbols where possible
+rownames(sce_PRET_HHD) <- uniquifyFeatureNames(rownames(sce_PRET_HHD), rowData(sce_PRET_HHD)$Symbol)
+
+# check your sce object
+sce_PRET_HHD
+
+# Part A
+# Re run the analysis using these new samples.
+summed_PRET_HHD <- aggregateAcrossCells(sce_PRET_HHD, 
+                               id=colData(sce_PRET_HHD)[,c("label", "SampleName")])
+summed_PRET_HHD
+
+summed_PRET_HHD.filt <- summed_PRET_HHD[,summed_PRET_HHD$ncells >= 20]
+
+targets_PRET_HHD <- colData(sce_PRET_HHD)[!duplicated(sce_PRET_HHD$SampleName),] %>%
+  data.frame()
+
+design_PRET_HHD <- model.matrix(~factor(SampleGroup), data=targets_PRET_HHD)
+rownames(design_PRET_HHD) <- targets_PRET_HHD$SampleName
+
+summed_PRET_HHD.filt$SampleGroup <- factor(summed_PRET_HHD.filt$SampleGroup)
+
+de.results_PRET_HHD <- pseudoBulkDGE(summed_PRET_HHD.filt, 
+                            label = summed_PRET_HHD.filt$label,
+                            design = ~SampleGroup,
+                            coef = "SampleGroupPRE-T",
+                            condition = summed_PRET_HHD.filt$SampleName)
+
+# Part B
+# Looking at your results, which cluster has the most DEGs?
+
+is.de_PRET_HHD <- decideTestsPerLabel(de.results_PRET_HHD, threshold=0.05)
+summarizeTestsPerLabel(is.de_PRET_HHD)
+
+# Part C
+# Which genes are sig. DE in that cluster and not the others?
+
+remotely.de_PRET_HHD <- decideTestsPerLabel(de.results_PRET_HHD, threshold=0.5)
+not.de_PRET_HHD <- remotely.de_PRET_HHD==0 | is.na(remotely.de_PRET_HHD)
+
+cz <- "2"
+
+other.labels_PRET_HHD <- setdiff(colnames(not.de_PRET_HHD), cz)
+
+unique.degs_PRET_HHD <- is.de_PRET_HHD[,cz]!=0 & rowMeans(not.de_PRET_HHD[,other.labels_PRET_HHD])==1
+unique.degs_PRET_HHD <- names(which(unique.degs_PRET_HHD))
+head(unique.degs_PRET_HHD)
 ```
 
-Some things to note from our data exploration: 
-
-- Changing the random seed doesn't seem to _qualitatively_ change the results
-dramatically. The same groups of cells are still seen. However, their relative
-position on the axis might change from run to run.
-- Low perplexities will favour resolution of finer structure, possibly to the
-point that the visualization is compromised by random noise. Thus, it is
-advisable to test different perplexity values to ensure that the choice of
-perplexity does not drive the interpretation of the plot.
-- Exploring the expression of known marker genes (from literature or previous
-experiments we might have done) may help us interpret these plots and judge
-whether a particular choice of perplexity is adequate to represent the expected
-cell types in our data.
 
 </details>
 
@@ -430,13 +473,13 @@ table(Sig=between.res$FDR <= 0.05, Sign=sign(between.res$logFC))
 ```
 
 ```{r}
-between.res[order(between.res$PValue),]
+between.res[order(between.res$FDR),]
 ```
 
 ```{r}
 summed.sub <- logNormCounts(summed.sub, size.factors=NULL)
 plotExpression(summed.sub, 
-    features=head(rownames(between.res)[order(between.res$PValue)]),
+    features=head(rownames(between.res)[order(between.res$FDR)]),
     x="label", 
     colour_by=I(factor(summed.sub$SampleName)))
 ```
