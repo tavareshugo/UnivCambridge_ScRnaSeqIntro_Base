@@ -1,4 +1,4 @@
-## ----load_packages, eval=FALSE-----------------------------------------------------------
+## ----load_packages-----------------------------------------------------------
  library(scater)
  library(scran)
  library(batchelor)
@@ -9,11 +9,9 @@
  library(bluster)
  library(BiocParallel)
  library(miloR)
- 
- bpp <- MulticoreParam(7)
 
 
-## ----read_data, cache=FALSE--------------------------------------------------------------
+## ----read_data--------------------------------------------------------------
 
 sce <- readRDS("R_objects/Caron_clustered.PBMMCandETV6RUNX1.rds")
 
@@ -190,7 +188,7 @@ plotExpression(logNormCounts(summed.filt),
   ggtitle(top_gene)
 
 
-## ----exercise1, eval=FALSE---------------------------------------------------------------
+## ----exercise 1---------------------------------------------------------------
 ## # First load in the other two sample groups
 ## sce_PRET_HHD <- readRDS("R_objects/Caron_clustered.PRETandHHD.rds")
 ## 
@@ -434,7 +432,7 @@ plotDAbeeswarm(da_results, "NhoodGroup")
 
 
 
-## ----exercise2, eval=FALSE---------------------------------------------------------------
+## ----exercise 2---------------------------------------------------------------
 ## # First load in the other two sample groups
 ## set.seed(42) # set your random seed for reproducibility
 ## 
@@ -463,7 +461,7 @@ plotDAbeeswarm(da_results, "NhoodGroup")
 
 
 
-## ----exercise2_solution, eval=FALSE------------------------------------------------------
+## ----exercise2_solution------------------------------------------------------
 ## # First load in the other two sample groups
  set.seed(42) # set your random seed for reproducibility
 ## 
