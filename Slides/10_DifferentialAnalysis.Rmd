@@ -20,9 +20,9 @@ knitr::include_graphics('Images/workflow2_diffExpre.png')
 
 Clusters and/or cell types have been identified, we now want to compare sample groups:
 
-* Differential expression - Differences in expression between sample group within a cluster
+* Differential expression - Differences in expression between sample group within a biological state.
 
-* Differential abundance - Differences in cell numbers between sample groups within a cluster
+* Differential abundance - Differences in cell numbers between sample groups within a biological state.
   
 ## Differential Expression
 
@@ -86,7 +86,7 @@ Steps:
 
 Aim:
 
-- test for significant changes in per-cluster cell abundance across conditions
+- test for significant changes in grouped cell abundance across conditions
 
 Example:
 
