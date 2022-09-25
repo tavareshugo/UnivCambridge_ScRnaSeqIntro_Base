@@ -10,6 +10,12 @@ output:
     css: css/stylesheet.css
 ---
 
+## Single Cell RNAseq Analysis Workflow
+
+```{r echo=FALSE, out.width='70%', fig.align='center'}
+knitr::include_graphics('Images/workflow2_diffExpre.png')
+```
+
 ## Outline
 
 Clusters and/or cell types have been identified, we now want to compare sample groups:
@@ -103,17 +109,23 @@ Milo
 - Faster and scalable
 
 
-
-## Differencial Abundance
+## Differencial Abundance - Milo
 
 Steps:
 
-- Count cells assigned to each label, i.e. cluster or cell type
+- Construct KNN graph
 
-- Same workflow as for differential expression above,
-
-  * except counts are of cells per label, not of reads per gene 
+  - rescales UMI count by per-cell sequencing depth
+  - log transforms 
+  - uses PCA
+  - calculates Euclidean distance between cells and its k nearest neighbour in PC space
   
-- Share information across labels
+- Defines Cell Neighbourhoods
 
-  * to improve our estimates of the biological variability in cell abundance between replicates.
+- Counts cells in Neighbourhoods
+
+- Tests for DA in Neighbourhoods
+
+- Does a multiple testing correction (Spacial FDR)
+
+- Visualiations
