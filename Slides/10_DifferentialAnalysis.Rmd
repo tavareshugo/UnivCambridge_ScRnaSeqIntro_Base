@@ -1,7 +1,7 @@
 ---
 title: "Differential expression and abundance between conditions"
 author: "Abbi Edwards"
-date: "Bitesize - May 2022"
+date: "Sept 2022"
 output:
   ioslides_presentation:
     widescreen: true
@@ -86,6 +86,26 @@ Example:
 
 - which cell types are depleted or enriched upon treatment?
 
+## Differencial Abundance - Milo
+
+- Most methods require defined clusters as input. Assigning cells to discrete clusters in context of continuous differentiation, developmental or stimulation trajectories.
+
+- Methods that don't require clusters also don't model variability in cell numbers among replicates or can only carry out pairwise comparisons.
+
+Milo
+
+- Uses K- nearest neighbour graph to model cellular states as overlapping neighbourhoods. Non-independence is accounted for with a weighted version of the Benjamini–Hochberg method.
+
+- Determines neighbourhoods and groupings independently of our defined clusters
+
+- Can be used for complex models
+
+- Faster and scalable
+
+
+
+## Differencial Abundance
+
 Steps:
 
 - Count cells assigned to each label, i.e. cluster or cell type
@@ -97,4 +117,3 @@ Steps:
 - Share information across labels
 
   * to improve our estimates of the biological variability in cell abundance between replicates.
-
