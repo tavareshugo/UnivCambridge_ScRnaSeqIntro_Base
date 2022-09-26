@@ -31,7 +31,7 @@ set.seed(123)
 Some of the materials originate in the [Hemberg group course
 material](https://biocellgen-public.svi.edu.au/mig_2019_scrnaseq-workshop/clustering-and-cell-annotation.html)
 with some of the text copied with a few edits. Also see the OSCA book's ["Basic"](http://bioconductor.org/books/release/OSCA.basic/clustering.html) and
-["Advanced"](http://bioconductor.org/books/release/OSCA.basic/clustering.html) 
+["Advanced"](http://bioconductor.org/books/release/OSCA.advanced/clustering-redux.html) 
 chapters on clustering. In particular, please read the
 [overview](http://bioconductor.org/books/release/OSCA.basic/clustering.html#overview-1)
 with regard to the comments on the "correctness" of any given clustering result.
