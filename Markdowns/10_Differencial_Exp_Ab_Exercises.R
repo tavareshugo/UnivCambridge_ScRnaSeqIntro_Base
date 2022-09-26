@@ -15,6 +15,11 @@ library(miloR)
 ## # First load in the other two sample groups
 ## sce_PRET_HHD <- readRDS("R_objects/Caron_clustered.PRETandHHD.rds")
 ## 
+## # create the milo design table
+## milo_design <- data.frame(colData(milo))[,c("SampleName", "SampleGroup")]
+## milo_design <- distinct(milo_design)
+## rownames(milo_design) <- milo_design$SampleName
+## 
 ## # replace the ensembl IDs with gene symbols where possible
 ## rownames(sce_PRET_HHD) <- uniquifyFeatureNames(rownames(sce_PRET_HHD), rowData(sce_PRET_HHD)$Symbol)
 ## 
