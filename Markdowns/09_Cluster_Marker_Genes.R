@@ -92,7 +92,8 @@ plotGroupedHeatmap(sce,
 plotHeatmap(sce, 
             features = rownames(c10_top_genes),
             order_columns_by = c("label", "SampleGroup"),
-                   scale = TRUE, 
+            scale = TRUE, 
+            center = TRUE,
             zlim = c(-3, 3))
 
 plotGroupedHeatmap(sce, 
@@ -100,6 +101,7 @@ plotGroupedHeatmap(sce,
                    group = "label",
                    block = "SampleGroup",
                    scale = TRUE, 
+                   center = TRUE,
                    zlim = c(-3, 3))
 
 ## Adjusting the log fold change threshold
