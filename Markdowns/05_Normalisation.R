@@ -11,22 +11,32 @@ library(patchwork)
 
 
 #################################################################################
+
+# set number of cores for processing
+bpp <- MulticoreParam(7) 
+
 # load data
-bpp <- MulticoreParam(7) # set number of cores
-
 sce <- readRDS("R_objects/Caron_filtered.500.rds")
+
+# check data object
 sce
+
+# Check number of cells per sample
 table(sce$SampleName)
+
 #################################################################################
 
 #################################################################################
-# PBMMC_1 sample cell UMI counts distribution before normalization
+# PBMMC_1 cell UMI counts distribution before normalization
+
+# Subset the data we need from the sce object
 oneSamTab <- colData(sce) %>% 
   as.data.frame() %>% 
   filter(SampleName == "PBMMC_1") %>% 
   dplyr::select(SampleName,Barcode, sum) %>% 
   mutate(cell_num = 1:n())
 
+# Make a bar plot of the UMI counts per cell
 p_before_nom <- ggplot(data=oneSamTab, aes(x=cell_num, y=sum)) +
   geom_bar(stat = 'identity') +
   labs( x= 'Cell Index',
@@ -37,6 +47,7 @@ p_before_nom <- ggplot(data=oneSamTab, aes(x=cell_num, y=sum)) +
     plot.title = element_text(hjust = 0.5, size=20, color = 'red')
   )
 
+# Display the plot
 p_before_nom
 #################################################################################
 
@@ -46,29 +57,44 @@ p_before_nom
 # Deconvolution Normalisation
 # Deconvolution : Compute size factors
 set.seed(100)
-# get clusters 
+
+# get clusters - deconvolution pools are made only within clusters
 clust <- quickCluster(sce,BPPARAM=bpp)
+
+# how many clusters do we have and how big are they?
 table(clust)
 
+# We have just the raw counts assay at the moment
 assayNames(sce)
 
+# We have no size factors for the cells at this stage
 sizeFactors(sce)
+
 # compute pooled size factors
 sce <- computePooledFactors(sce,
 			 clusters = clust,
 			 min.mean = 0.1,
 			 BPPARAM = bpp)
 
+# We still have just the raw counts assay
 assayNames(sce)
+
+# We now have size factors which we can extract and summarise
 deconv.sf <- sizeFactors(sce)
 summary(deconv.sf)
+
 #################################################################################
 
 
 #################################################################################
 # deconvolution vs library_size size factors
+
+# Calculate library size factors
 lib.sf <- librarySizeFactors(sce)
 
+# Combine the size factor results with the sample group names and make a 
+# scatter plot of the results
+# This shows how the library size and deconvolution size factors differ
 data.frame(LibrarySizeFactors = lib.sf, 
            DeconvolutionSizeFactors = deconv.sf,
 			     SampleGroup = sce$SampleGroup) %>%
@@ -76,29 +102,38 @@ data.frame(LibrarySizeFactors = lib.sf,
       geom_point(aes(col=SampleGroup)) +
       geom_abline(slope = 1, intercept = 0)
 
+
 #################################################################################
 
 #################################################################################
 # Deconvolution: scale and transform raw counts and save object
+
+# We still only have a raw counts assay
 assayNames(sce)
 
+# Use the deconvolution scale factors to generate an assay of normalised counts
+# called "logcounts"
 sce <- logNormCounts(sce)
 
 assayNames(sce)
 
-# PBMMC_1 sample cell UMI counts distribution after normalization
+# PBMMC_1 cell UMI counts distribution after normalization
+# Get the normalised counts, without doing the log transformation and
+# sum them for each cell
 norm_counts <- logNormCounts(sce,transform='none' ) %>% 
   assay('normcounts') %>% 
   colSums()
 
+# Make a tibble dataframe of the total normalised counts per cell
 norm_counts <- tibble(Barcode=names(norm_counts),
                       normCounts = log2(norm_counts)
                       )
 head(norm_counts)
 
+# Add the raw counts sum, cell numbers and SampleName to the tibble
 norm_counts <- inner_join(norm_counts, oneSamTab, by='Barcode')
 
-
+# Plot the raw and normalised cell UMI counts
 p_after_norm <- ggplot(data=norm_counts, aes(x=cell_num, y=normCounts)) +
   geom_bar(stat = 'identity') +
   labs( x= 'Cell Index',
@@ -111,7 +146,58 @@ p_after_norm <- ggplot(data=norm_counts, aes(x=cell_num, y=normCounts)) +
 
 p_before_nom + p_after_norm
 
-p_after_norm
+
+## EXTRAS
+
+# Let's separate out the scaling normalisation from the log transformation
+# What do the un-normalised data look if we log them?
+p_before_nom_nolog <- ggplot(data=oneSamTab, aes(x=cell_num, y=log2(sum))) +
+  geom_bar(stat = 'identity') +
+  labs( x= 'Cell Index',
+        y='Cell UMI counts',
+        title = "Logged raw counts" ) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size=20, color = 'red')
+  )
+
+p_before_nom_nolog + p_after_norm
+
+
+# The log transformation is meant to reduce the correlation between mean and variance 
+# for genes - has this worked?
+
+# We can at the relationship between the mean gene expression and variance
+# for counts, scaled counts and scaled, logged counts
+
+# mean and variance for raw counts
+mean <- rowMeans(assay(sce, "counts"))
+var <- rowVars(assay(sce, "counts"))
+
+# There is a strong linear relationship between mean and variance
+plot(log(mean), log(var))
+abline(a=1, b=1, col="red")
+
+# Mean and variance for scaled counts
+mean_scaled <- logNormCounts(sce,transform='none' ) %>% 
+  assay('normcounts') %>% 
+  rowMeans()
+var_scaled <- logNormCounts(sce,transform='none' ) %>% 
+  assay('normcounts') %>% 
+  rowVars()
+
+plot(log(mean_scaled), log(var_scaled))
+abline(a=1, b=1, col="red")
+
+# Mean and variance for scaled, log transformed counts
+mean_norm <- rowMeans(assay(sce, "logcounts"))
+var_norm <- rowVars(assay(sce, "logcounts"))
+
+plot(mean_norm, var_norm)
+abline(a=1, b=1, col="red")
+
+# We see that the log transformation removes a large part of the relationship between
+# mean and variance for gene expression values
 
 # save sce object after normalisation
 saveRDS(sce, "results/caron_normalised.rds")
@@ -272,3 +358,4 @@ assay(sce, "sctrans_norm", withDimnames=FALSE) <- vstMat
 # Exercise: apply the sctransform VST normalisation on a single sample: ETV6-RUNX1_1 (aka SRR9264343).
 #################################################################################
 #################################################################################
+
