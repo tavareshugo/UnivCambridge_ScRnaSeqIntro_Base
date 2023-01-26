@@ -106,7 +106,7 @@ data.frame(LibrarySizeFactors = lib.sf,
 #################################################################################
 
 #################################################################################
-# Deconvolution: scale and transform raw counts and save object
+# Deconvolution: scale and transform raw counts
 
 # We still only have a raw counts assay
 assayNames(sce)
@@ -146,9 +146,6 @@ p_after_norm <- ggplot(data=norm_counts, aes(x=cell_num, y=normCounts)) +
 
 p_before_nom + p_after_norm
 
-
-## EXTRAS
-
 # Let's separate out the scaling normalisation from the log transformation
 # What do the un-normalised data look if we log them?
 p_before_nom_nolog <- ggplot(data=oneSamTab, aes(x=cell_num, y=log2(sum))) +
@@ -163,12 +160,16 @@ p_before_nom_nolog <- ggplot(data=oneSamTab, aes(x=cell_num, y=log2(sum))) +
 
 p_before_nom_nolog + p_after_norm
 
+#################################################################################
+
+#################################################################################
+# Deconvolution: the effect of log transformation on mean and variance correlation for genes
 
 # The log transformation is meant to reduce the correlation between mean and variance 
 # for genes - has this worked?
 
-# We can at the relationship between the mean gene expression and variance
-# for counts, scaled counts and scaled, logged counts
+# We can look at the relationship between the mean gene expression and variance
+# for raw UMI counts, scaled counts and scaled, logged counts
 
 # mean and variance for raw counts
 mean <- rowMeans(assay(sce, "counts"))
@@ -201,6 +202,7 @@ abline(a=1, b=1, col="red")
 
 # save sce object after normalisation
 saveRDS(sce, "results/caron_normalised.rds")
+
 #################################################################################
 
 #################################################################################
