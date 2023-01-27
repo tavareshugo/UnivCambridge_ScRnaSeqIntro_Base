@@ -18,7 +18,7 @@ plotReducedDim(sce,
                colour_by = "label", 
                text_by = "label")
 
-# visualise specific marker
+# visualise monocyte-specific marker
 plotReducedDim(sce, 
                dimred = "UMAP_corrected",
                colour_by = "CST3", 
@@ -88,62 +88,63 @@ plotExpression(sce,
 
 # get top-ranked markers for cluster 11
 c11_top_genes <- c11_markers %>% 
-  filter(rank.logFC.cohen <= 5)
+  filter(rank.logFC.cohen <= 5) %>% 
+  rownames()
 
 # visualise their expression as a heatmap
 plotHeatmap(sce, 
-            features = rownames(c11_top_genes),
+            features = c11_top_genes,
             order_columns_by = c("label", "SampleGroup"))
 
 # heatmap average per group (cluster)
 plotGroupedHeatmap(sce, 
-                   features = rownames(c11_top_genes),
+                   features = c11_top_genes,
                    group = "label",
                    block = "SampleGroup")
 
 # scaled heatmap (z-scores)
 plotHeatmap(sce, 
-            features = rownames(c11_top_genes),
+            features = c11_top_genes,
             order_columns_by = c("label", "SampleGroup"),
             scale = TRUE, 
             center = TRUE,
             zlim = c(-3, 3))
 
 plotGroupedHeatmap(sce, 
-                   features = rownames(c11_top_genes),
+                   features = c11_top_genes,
                    group = "label",
                    block = "SampleGroup",
                    scale = TRUE, 
                    center = TRUE,
                    zlim = c(-3, 3))
 
+# dot plot of expression showing average expression and detection rate
+plotDots(sce, 
+         features = c11_top_genes,
+         group = "label", 
+         block = "SampleGroup",
+         scale = TRUE, center = TRUE, zlim = c(-3, 3))
+
 
 # Adjusting log-fold change ----
 
-c12_top_markers <- markers[["12"]] %>% 
-  as.data.frame() %>% 
-  filter(rank.logFC.cohen <= 2)
-c12_top_markers
-
-c12_top_markers["FLT3", ] %>%
-  select(min.logFC.cohen, max.logFC.cohen)
+c11_markers["SNX10", ] %>% 
+  select(min.logFC.cohen, max.logFC.cohen, rank.logFC.cohen)
 
 plotExpression(sce,
-               features = "FLT3",
+               features = "SNX10",
                x = "label")
 
+# score markers with LFC threshold of 2
 markers_lfc <- scoreMarkers(sce,
                            groups = sce$label,
                            block = sce$SampleName,
                            lfc = 2)
 
-c12_markers_lfc <- as.data.frame(markers_lfc[["12"]])
+# extract new results for cluster 11
+c11_markers_lfc2 <- as.data.frame(markers_lfc[["11"]])
 
-c12_markers_lfc %>%
-  select(contains("cohen")) %>%
-  filter(rank.logFC.cohen <= 2)
-
-c12_markers_lfc["FLT3",  c("rank.logFC.cohen")]
+c11_markers_lfc2["SNX10",  c("rank.logFC.cohen")]
 
 
 # Annotation labels ----

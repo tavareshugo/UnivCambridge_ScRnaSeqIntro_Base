@@ -103,7 +103,7 @@ will allow us to identify the cell types for each cluster.
 For example genes such as the "CST3" gene, which is a known monocyte marker:
 
 ```{r cst3_umap}
-# visualise specific marker
+# visualise monocyte-specific marker
 plotReducedDim(sce, 
                dimred = "UMAP_corrected",
                colour_by = "CST3", 
@@ -361,16 +361,17 @@ should be high, relative to the gene's variance)
 
 ```{r exercise_1_answer_b, purl=FALSE}
 c6_top_genes <- c6_markers %>% 
-  filter(rank.logFC.detected <= 2 & rank.logFC.cohen <= 10)
+  filter(rank.logFC.detected <= 2 & rank.logFC.cohen <= 10) %>% 
+  rownames()
 c6_top_genes
 ```
 
-We obtain `r nrow(c6_top_genes)` genes with these criteria.
+We obtain `r length(c6_top_genes)` genes with these criteria.
 Finally, we visualize the expression of these genes:
 
 ```{r exercise_1_answer_c, purl=FALSE}
 plotExpression(sce, 
-               features = rownames(c6_top_genes), 
+               features = c6_top_genes, 
                x = "label")
 ```
 
@@ -406,7 +407,8 @@ We will demonstrate this using the top marker genes for cluster 11.
 ```{r cluster_11_top_genes}
 # get top-ranked markers for cluster 11
 c11_top_genes <- c11_markers %>% 
-  filter(rank.logFC.cohen <= 5)
+  filter(rank.logFC.cohen <= 5) %>% 
+  rownames()
 ```
 
 We can make generate a heatmap showing the expression in individual cells using
@@ -416,7 +418,7 @@ from the same cluster and cells from the same samplegroup are grouped together.
 ```{r cluster_11_heatmap_by_cells}
 # visualise their expression as a heatmap
 plotHeatmap(sce, 
-            features = rownames(c11_top_genes),
+            features = c11_top_genes,
             order_columns_by = c("label", "SampleGroup"))
 ```
 
@@ -429,7 +431,7 @@ of the averages.
 ```{r cluster_11_heatmap_by_block}
 # heatmap average per group (cluster)
 plotGroupedHeatmap(sce, 
-                   features = rownames(c11_top_genes),
+                   features = c11_top_genes,
                    group = "label",
                    block = "SampleGroup")
 ```
@@ -442,14 +444,14 @@ relative scale.
 ```{r heatmap_with_z_score}
 # scaled heatmap (z-scores)
 plotHeatmap(sce, 
-            features = rownames(c11_top_genes),
+            features = c11_top_genes,
             order_columns_by = c("label", "SampleGroup"),
             scale = TRUE, 
             center = TRUE,
             zlim = c(-3, 3))
 
 plotGroupedHeatmap(sce, 
-                   features = rownames(c11_top_genes),
+                   features = c11_top_genes,
                    group = "label",
                    block = "SampleGroup",
                    scale = TRUE, 
@@ -459,6 +461,19 @@ plotGroupedHeatmap(sce,
 
 In this case, the colour scale can be interpreted as the number of standard
 deviations above/below the mean of that gene across all cells.
+
+Another useful visualisation is to use **dot plots** of expression that show both the average gene expression (as a colour scale) and the number of cells in which the gene is detected (as the size of the points).  
+We can generate such a plot using the `plotDots()` function: 
+
+```{r dot_plot}
+# dot plot of expression showing average expression and detection rate
+plotDots(sce, 
+         features = c11_top_genes,
+         group = "label", 
+         block = "SampleGroup",
+         scale = TRUE, center = TRUE, zlim = c(-3, 3))
+```
+
 
 ## Adjusting the log-fold change
 
@@ -472,70 +487,47 @@ between the clusters and the variance in gene expression scores within each
 cluster. If a gene has low variance, it is possible that it will be ranked
 highly even if the magnitude of the difference between the clusters is low.
 These genes will not necessarily make good marker genes. It may therefore be
-desirable to favour the detection of genes with larger log-fold changes. A
-log-fold change threshold can be set using the `lfc=` argument in score markers.
+desirable to favour the detection of genes with larger log-fold changes. 
 
-**UNDER DEVELOPMENT**
+For example, in the results from cluster 11, the gene _SNX10_ had a min-rank for Cohen's *d* of 5:
 
-<!--
-For example, in the results from cluster 12, the gene _FLT3_ was one  of twelve
-genes with a min-rank for Cohen's *d* of <= 2:
-
-```{r c12_top_markers}
-c12_top_markers <- markers[["12"]] %>% 
-  as.data.frame() %>% 
-  filter(rank.logFC.cohen <= 2)
-c12_top_markers
+```{r c11_top_markers}
+c11_markers["SNX10", ] %>% 
+  select(min.logFC.cohen, max.logFC.cohen, rank.logFC.cohen)
 ```
 
-However, we can also see that its LFC goes from -0.1 to 13.8, which is a huge
-range!
-
-```{r c12_flt3_expression}
-c12_top_markers["FLT3", ] %>%
-  select(min.logFC.cohen, max.logFC.cohen)
-```
-
+However, we can also see that its LFC goes from 0.3 to 7, which is a large range. 
 Looking at its expression, we can see what might be going on:
 
-```{r plot_flt3_expression}
+```{r plot_snx10_expression}
 plotExpression(sce,
-               features = "FLT3",
+               features = "SNX10",
                x = "label")
 ```
 
-This gene has very low variation in expression in some clusters, and because Cohen's
-_d_ measures average differences _scaled by variance_, the gene comes up as
-having a high value for that metric in some comparisons.
+This gene has very low variation in expression in some clusters (because it's lowly detected), and because Cohen's _d_ measures average differences _scaled by variance_, the gene comes up as having a high value for that metric in some comparisons.
 
-To make our analysis more restrictive, we can instead indicate to the
-`scoreMarkers()` function what is the minimum LFC threshold we want to use to
-consider a gene for ranking. For example, a LFC > 2:
+To make our analysis more restrictive, we can instead indicate to the `scoreMarkers()` function what is the minimum LFC threshold we want to use to consider a gene for ranking. 
+For example, a LFC > 2:
 
 ```{r score_markers_with_lfc_threshold}
+# score markers with LFC threshold of 2
 markers_lfc <- scoreMarkers(sce,
                            groups = sce$label,
                            block = sce$SampleName,
                            lfc = 2)
+
+# extract new results for cluster 11
+c11_markers_lfc2 <- as.data.frame(markers_lfc[["11"]])
 ```
 
-FLT3 no longer appears in the candidate cluster marker genes list by min-rank of
-Cohen's *d*.
-
-```{r c12_thresholded_markers}
-c12_markers_lfc <- as.data.frame(markers_lfc[["12"]])
-
-c12_markers_lfc %>%
-  select(contains("cohen")) %>%
-  filter(rank.logFC.cohen <= 2)
-```
-
-In fact it's min-rank for Cohen's *d* has dropped to:
+Now, _SNX10_'s rank dropped substantially: 
 
 ```{r c12_FLT3_threholded_rank}
-c12_markers_lfc["FLT3",  c("rank.logFC.cohen")]
+c11_markers_lfc2["SNX10",  c("rank.logFC.cohen")]
 ```
--->
+
+In conclusion, using an LFC threshold will change the ranking of the genes, to favour those genes that have highest LFC, even if they have higher variance in expression. 
 
 :::note
 
