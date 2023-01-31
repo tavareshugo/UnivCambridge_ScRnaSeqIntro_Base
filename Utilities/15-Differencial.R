@@ -9,19 +9,23 @@
 # This script generates the clustered sce objects for the
 # Differential Expression/Abundance sessions
 
-library(scater) 
+library(scater)
 library(scran)
 library(bluster)
 library(batchelor)
 
 #sce <- readRDS("data/R_objects/Caron_filtered.full.rds")
-sce <- readRDS("Caron_filtered.full.rds")
+sce <- readRDS("R_objects/Caron_filtered.full.rds")
+rownames(sce) <- uniquifyFeatureNames(rownames(sce), rowData(sce)$Symbol)
+
+
+# First dataset ----
 
 # For the first data set we want just the PBMMC and ETV6-RUNX1 samples
-
-sce.1 <- sce[, sce$SampleGroup%in%c("PBMMC", "ETV6-RUNX1")]
+sce.1 <- sce[, sce$SampleGroup %in%c ("PBMMC", "ETV6-RUNX1")]
 
 # Normalise
+# Note - we should do this per batch and then multiBatchNorm - to fix in future
 set.seed(100) 
 clust.1 <- quickCluster(sce.1)
 sce.1 <- computePooledFactors(sce.1, cluster=clust.1, min.mean=0.1)
@@ -41,33 +45,57 @@ assay(sce.1, "reconstructed") <- assay(sce_corrected.1, "reconstructed")
 
 # Cluster
 out.1 <- clusterSweep(reducedDim(sce.1, "corrected"),
-                    BLUSPARAM = NNGraphParam(),
-                    k = as.integer(c(60)),
-                    cluster.fun = c("leiden"),
-                    BPPARAM=BiocParallel::MulticoreParam(7))
-
+                      BLUSPARAM = NNGraphParam(),
+                      k = as.integer(c(60)),
+                      cluster.fun = c("leiden"),
+                      BPPARAM=BiocParallel::MulticoreParam(7))
 
 colData(sce.1) <- cbind(colData(sce.1), DataFrame(out.1$clusters))
-
 colLabels(sce.1) <- sce.1$k.60_cluster.fun.leiden
 
 # Reduced Dims on Corrected
-
 sce.1 <- runTSNE(sce.1, dimred="corrected", 
-               n_dimred=10, 
-               BPPARAM = BiocParallel::MulticoreParam(7), 
-               name = "TSNE_corrected")
+                 n_dimred=10, 
+                 BPPARAM = BiocParallel::MulticoreParam(7), 
+                 name = "TSNE_corrected")
 sce.1 <- runUMAP(sce.1, dimred="corrected", 
-               n_dimred=10, 
-               BPPARAM = BiocParallel::MulticoreParam(7), 
-               name = "UMAP_corrected")
+                 n_dimred=10, 
+                 BPPARAM = BiocParallel::MulticoreParam(7), 
+                 name = "UMAP_corrected")
 
-#saveRDS(sce.1, "data/R_objects/Caron_clustered.PBMMCandETV6RUNX1.rds")
-saveRDS(sce.1, "Caron_clustered.PBMMCandETV6RUNX1.rds")
+# # manual cell type annotation based on these genes
+# known_genes <- c(
+#   "HBA1", # erythrocytes
+#   "CST3", # monocytes
+#   "CD3E", # T cells
+#   "NKG7", # NK T cells
+#   "CD79A",  # B cells
+#   "MS4A1" # CD20 B cells
+#   )
+# plotDots(sce.1,
+#          features = known_genes,
+#          group = "k.60_cluster.fun.leiden", 
+#          block = "SampleGroup",
+#          scale = TRUE, center = TRUE, zlim = c(-3, 3))
+# plotGroupedHeatmap(sce.1,
+#          features = known_genes,
+#          group = "label", 
+#          block = "SampleGroup",
+#          scale = TRUE, center = TRUE, zlim = c(-3, 3))
 
-# Second dataset
+levels(colLabels(sce.1)) <- c("B (c1)", "B (c2)", "B (c3)", 
+                              "T (c4)", "Erythrocytes (c5)", "CD20+ B (c6)", 
+                              "B (c7)", "NK T (c8)", "Erythrocytes (c9)", 
+                              "Mono (c10)", "B (c11)", "CD20+ B (c12)",
+                              "CD20+ B (c13)", "T (c14)", "Erythrocytes (c15)", 
+                              "Erythrocytes (c16)", "Mono (c17)")
 
-sce.2 <- sce[, sce$SampleGroup%in%c("PRE-T", "HHD")]
+saveRDS(sce.1, "R_objects/Caron_clustered.PBMMCandETV6RUNX1.rds")
+
+
+# Second dataset ----
+
+sce.2 <- sce[, sce$SampleGroup %in% c("PRE-T", "HHD")]
 
 # Normalise
 set.seed(100) 
@@ -89,17 +117,15 @@ assay(sce.2, "reconstructed") <- assay(sce_corrected.2, "reconstructed")
 # Cluster
 out.2 <- clusterSweep(reducedDim(sce.2, "corrected"),
                       BLUSPARAM = NNGraphParam(),
-                      k = as.integer(c(40)),
-                      cluster.fun = c("walktrap"),
+                      k = as.integer(c(60)),
+                      cluster.fun = c("leiden"),
                       BPPARAM=BiocParallel::MulticoreParam(7))
 
-
 colData(sce.2) <- cbind(colData(sce.2), DataFrame(out.2$clusters))
+colLabels(sce.2) <- sce.2$k.60_cluster.fun.leiden
 
-colLabels(sce.2) <- sce.2$k.40_cluster.fun.walktrap
 
 # Reduced Dims on Corrected
-
 sce.2 <- runTSNE(sce.2, dimred="corrected", 
                  n_dimred=10, 
                  BPPARAM = BiocParallel::MulticoreParam(7), 
@@ -109,7 +135,30 @@ sce.2 <- runUMAP(sce.2, dimred="corrected",
                  BPPARAM = BiocParallel::MulticoreParam(7), 
                  name = "UMAP_corrected")
 
-#saveRDS(sce.2, "data/R_objects/Caron_clustered.PRETandHHD.rds")
-saveRDS(sce.2, "Caron_clustered.PRETandHHD.rds")
+# # manual cell type annotation based on these genes
+# # very rough annotation based on exploratory analysis with plotExpression()
+# known_genes <- c(
+#   "HBA1", # erythrocytes
+#   "CST3", # monocytes
+#   "CD3E", # T cells
+#   "NKG7", # NK T cells
+#   "CD79A",  # B cells
+#   "MS4A1" # CD20 B cells
+#   )
+# plotGroupedHeatmap(sce.2, 
+#                    features = known_genes,
+#                    group = "k.60_cluster.fun.leiden",
+#                    block = "SampleGroup", 
+#                    scale = TRUE, center = TRUE, zlim = c(-3, 3))
+# plotDots(sce.2, 
+#                    features = known_genes,
+#                    group = "k.60_cluster.fun.leiden",
+#                    block = "SampleGroup", 
+#                    scale = TRUE, center = TRUE, zlim = c(-3, 3))
 
+levels(colLabels(sce.2)) <- c("Mono (c1)", "CD20+ B (c2)", 
+                              "B (c3)", "B (c4)", "B (c5)", 
+                              "T (c6)", "CD20 + B (c7)", 
+                              "B (c8)", "B (c9)", "Erythrocytes (c10)")
 
+saveRDS(sce.2, "R_objects/Caron_clustered.PRETandHHD.rds")
