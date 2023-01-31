@@ -16,7 +16,13 @@ sce <- readRDS("R_objects/Caron_batch_corrected.500.rds")
 # check samples 
 table(sce$SampleName)
 
-# cluster cells default 
+###############################
+# Clustering with the walktrap method
+#####################################
+
+# cluster cells using default clustering parameters and the batch-corrected reduced dimensions
+# The default algorithm for clusterCells constructs a SNN graph with k = 10 and 
+# edge weighting by rank. It then uses walktrap to identify communities. 
 clustering1 <- clusterCells(sce, use.dimred="corrected", full=TRUE)
 
 # table of clusters 
@@ -34,17 +40,19 @@ plotReducedDim(sce,
                text_by = "Clusters1")
 
 
-# cluster cells - walktrap k15 
+# Generate an alternative clustering using Shared Nearest Neighbours with k = 15 
+# to generate the graph and the walktrap algorithm to identify communities
 sce$walktrap15 <- clusterCells(sce, 
                            use.dimred = "corrected", 
                            BLUSPARAM = SNNGraphParam(k = 15, 
                                                      cluster.fun = "walktrap"))
 
 
-# heatmap walktrap k15 
-table(sce$walktrap15, sce$SampleName) %>% 
-  pheatmap(cluster_rows = FALSE, cluster_cols = FALSE)
-
+# A heatmap showing the (logged) numbers of cells in each cluster for each dataset with 
+# walktrap k = 15 
+# This gives us an overview of how well each cluster is represented across the samples and the replicates
+w15_table <- log(table(sce$walktrap15, sce$SampleName)+1)
+pheatmap(w15_table, cluster_rows = TRUE, cluster_cols = FALSE)
 
 # plot tSNE walktrap k15 
 plotReducedDim(sce, 
@@ -61,6 +69,9 @@ plotReducedDim(sce,
                other_fields = list("SampleGroup")) +
   facet_wrap("SampleGroup")
 
+###############################
+# Clustering with the Louvain method
+#####################################
 
 # cluster cells - louvain k15 
 sce$louvain15 <- clusterCells(sce, 
@@ -89,13 +100,18 @@ plotReducedDim(sce,
 
 ################################################################################
 
+####################################
+# Assessing cluster behaviour
+###################################
 
-# calculate silhouette widths 
+# calculate silhouette widths for the Leiden, k=20 clustering
 sil.approx <- approxSilhouette(reducedDim(sce, "corrected"),
                                clusters=sce$leiden20)
 
+# Examine the silouette data
+sil.approx
 
-# silhouette width beeswarm 
+# silhouette width plot with beeswarm 
 plotSilBeeswarm <- function(silDat){
   silTab <- silDat %>% 
     as.data.frame() %>% 
@@ -140,10 +156,11 @@ plotSilGrid <- function(silDat){
           aspect.ratio = 1,
           panel.background = element_blank())
 }
-plotSilGrid(sil.approx)
 
+# Save Leiden 20 sil grid plot
+le20_3 <- plotSilGrid(sil.approx)
 
-# plot silhouette width walktrap k15 
+# plot silhouette width for walktrap k=15 clustering 
 sil.approx <- approxSilhouette(reducedDim(sce, "corrected"),
                                clusters=sce$walktrap15)
 
@@ -159,7 +176,7 @@ wp3 <- plotSilGrid(sil.approx)
 wp1 + wp2 + wp3
 
 
-# plot silhouette width louvain k15 
+# plot silhouette width for louvain k=15 clustering 
 sil.approx <- approxSilhouette(reducedDim(sce, "corrected"),
                                clusters=sce$louvain15)
 
@@ -174,53 +191,24 @@ lp3 <- plotSilGrid(sil.approx)
 
 lp1 + lp2 + lp3
 
+le20_3 + wp3+ lp3
 
-# pairwise modularity 
-walktrap15 <- clusterCells(sce, 
-                           use.dimred = "corrected", 
-                           BLUSPARAM = SNNGraphParam(k = 15, 
-                                                     cluster.fun = "walktrap"),
-                           full = TRUE)
-g <- walktrap15$objects$graph
-ratio <- pairwiseModularity(g, walktrap15$clusters, as.ratio=TRUE)
-
-hm1 <- pheatmap(log2(ratio+1),
-         cluster_rows=FALSE, 
-         cluster_cols=FALSE,
-         color=colorRampPalette(c("white", "blue"))(100))
-
-
-# plot modularity v silhouette widths 
-wp4 <- ggplotify::as.ggplot(hm1)
-wp2 + wp3 + wp4
-
-
-# plot modularity network 
-cluster.gr <- igraph::graph_from_adjacency_matrix(log2(ratio+1),
-                                                  mode="upper", 
-                                                  weighted=TRUE, diag=FALSE)
-
-set.seed(11001010)
-plot(cluster.gr, 
-     edge.width=igraph::E(cluster.gr)$weight*5,
-     layout=igraph::layout_with_lgl)
-
-
-# jaccard index 
+# Look at the concordance of different clusterings using the jaccard index 
 jacc.mat <- linkClustersMatrix(sce$louvain15, sce$walktrap15)
 rownames(jacc.mat) <- paste("Louvain", rownames(jacc.mat))
 colnames(jacc.mat) <- paste("Walktrap", colnames(jacc.mat))
 pheatmap(jacc.mat, color=viridis::viridis(100), cluster_cols=FALSE, cluster_rows=FALSE)
 
 
-# clusterSweep 
+# Use clustersweep to examine a range clustering parameters
+# clusterSweepwith k = 5, 10, 15, 20, 25 and walktrap method
 out <- clusterSweep(reducedDim(sce, "corrected"),
                     BLUSPARAM = NNGraphParam(),
                     k = as.integer(c(5, 10, 15, 20, 25)),
                     cluster.fun = "walktrap",
                     BPPARAM=BiocParallel::MulticoreParam(7))
 
-# assess clustersweep 
+# make a data frame of clustersweep results
 df <- as.data.frame(out$parameters)
 
 # get the number of clusters
@@ -233,21 +221,14 @@ getMeanSil <- function(cluster) {
 }
 df$silhouette <- map_dbl(as.list(out$clusters), getMeanSil)
 
+# Generate line plots of the cluster number and mean silouette width
+# for different values of k
 nclPlot <- ggplot(df, aes(x = k, y = num.clusters)) + 
                   geom_line(lwd=2)
 silPlot <- ggplot(df, aes(x = k, y = silhouette)) + 
                   geom_line(lwd=2)
 nclPlot + silPlot
 
-# clusterSweep Jaccard index 
-jacc.mat <- linkClustersMatrix(out$clusters$k.15_cluster.fun.walktrap, 
-                               out$clusters$k.25_cluster.fun.walktrap)
-rownames(jacc.mat) <- paste("Walktrap_15", rownames(jacc.mat))
-colnames(jacc.mat) <- paste("Walktrap_25", colnames(jacc.mat))
-pheatmap(jacc.mat, 
-         color = viridis::viridis(100), 
-         cluster_cols = FALSE, 
-         cluster_rows = FALSE)
 
 ## -- Exercise 2 -- ############################################################
 
@@ -257,7 +238,7 @@ pheatmap(jacc.mat,
 # add_clusterSweep output to sce 
 colData(sce) <- cbind(colData(sce), DataFrame(out$clusters))
 
-# set labels 
+# set labels to our favourite clustering
 colLabels(sce) <- sce$k.25_cluster.fun.leiden
 
 # plot tSNE leiden k25 
@@ -267,73 +248,36 @@ plotReducedDim(sce,
                text_by = "label") +
   ggtitle("Leiden k=25 clusters")
 
-
-# symbols to rownames 
+# switch the rownames in the SCE object to be gene symbols
+# (and make sure they are unique!) 
 rownames(sce) <- uniquifyFeatureNames(rowData(sce)$ID, rowData(sce)$Symbol)
 
-
-# plot tSNE B cell markers 
-p1 <- plotReducedDim(sce, 
-               dimred = "TSNE_corrected", 
-               by_exprs_values = "logcounts",
-               colour_by = "MS4A1",
-               text_by = "label")
-p2 <- plotReducedDim(sce, 
+# plot B cell marker expression on TSNE 
+plotReducedDim(sce, 
                dimred = "TSNE_corrected",
                by_exprs_values = "logcounts",
                colour_by = "CD79A",
-               text_by = "label")
-p1 + p2
+               text_by = "label", other_fields = list("SampleGroup"))
 
 
-# plot expression B cell markers 
+# plot expression B cell marker as a violin plot 
 plotExpression(sce, 
                exprs_values = "logcounts",
                x = "label", 
                colour_by = "label",
-               features=c("MS4A1", "CD79A"))
-
+               features=c("CD79A"))
 
 # plot tSNE monocyte markers 
-p1 <- plotReducedDim(sce, 
+plotReducedDim(sce, 
                dimred = "TSNE_corrected",
                by_exprs_values = "logcounts",
-               colour_by = "FCGR3A",
+               colour_by = "LYZ",
                text_by = "label")
-p2 <- plotReducedDim(sce, 
-               dimred = "TSNE_corrected", 
-               by_exprs_values = "logcounts",
-               colour_by = "MS4A7",
-               text_by = "label")
-p1 + p2
-
 
 # plot expression monocyte markers 
 plotExpression(sce, 
                exprs_values = "logcounts",
                x = "label", 
                colour_by = "label",
-               features=c("FCGR3A", "MS4A7"))
-
-
-# plot tSNE dendritic cell markers 
-p1 <- plotReducedDim(sce, 
-               dimred = "TSNE_corrected",
-               by_exprs_values = "logcounts",
-               colour_by = "FCER1A",
-               text_by = "label")
-p2 <- plotReducedDim(sce, 
-               dimred = "TSNE_corrected",
-               by_exprs_values = "logcounts",
-               colour_by = "CST3",
-               text_by = "label")
-p1 + p2
-
-
-# plot expression dendritic cell markers 
-plotExpression(sce, 
-               exprs_values = "logcounts",
-               x = "label", 
-               colour_by = "label",
-               features=c("FCER1A", "CST3"))
+               features=c("LYZ"))
 
