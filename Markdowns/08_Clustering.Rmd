@@ -1,6 +1,6 @@
 ---
 title: "Introduction to single-cell RNA-seq analysis"
-date: "May 2022"
+date: "Jan 2023"
 subtitle: Clustering
 output:
   html_document:
@@ -42,13 +42,13 @@ of the analysis depends on the data set. One of the most promising applications
 of scRNA-seq is *de novo* discovery and annotation of cell-types based on
 transcription profiles. This requires the identification of groups of cells
 based on the similarities of the transcriptomes without any prior knowledge of
-the labels, or unsupervised clustering. To avoid the challenges caused by the
+the label a.k.a. unsupervised clustering. To avoid the challenges caused by the
 noise and high dimensionality of the scRNA-seq data, clustering is performed
-after feature selection and dimensionality reduction, for data that has not 
-required batch correction this would usually on the PCA output. As our data has
+after feature selection and dimensionality reduction. For data that has not 
+required batch correction this would usually be based on the PCA output. As our data has
 required batch correction we will use the "corrected" reducedDims data.
 
-We will focus graph-based clustering, however, it is also possible to apply
+We will focus here on graph-based clustering, however, it is also possible to apply
 hierarchical clustering and k-means clustering on smaller data sets - see the
 [OSCA
 book](http://bioconductor.org/books/release/OSCA.basic/clustering.html#vector-quantization-with-k-means)
@@ -94,8 +94,8 @@ parameters:
 
 ## Connecting nodes (cells) based on nearest neighbours
 
-Two types of NN graph may be use "K nearest-neighbour" (KNN) and "shared
-nearest-neighbour" (SNN). In an KNN graph two nodes (cells), say A and B, are
+Two types of NN graph may be used: "K nearest-neighbour" (KNN) and "shared
+nearest-neighbour" (SNN). In a KNN graph, two nodes (cells), say A and B, are
 connected by an edge if the distance between them is amongst the *k* smallest
 distances from A to other cells. In an SNN graph A and B are connected if the
 distance is amongst the *k* samllest distances from A to other cells and also
@@ -140,6 +140,14 @@ on three methods: walktrap, louvain and leiden. See the [OSCA
 book](http://bioconductor.org/books/release/OSCA.basic/clustering.html#overview-1)
 for details of others available in *scran*.
 
+## Modularity
+
+Several methods to detect clusters ('communities') in networks rely on a metric
+called "modularity". For a given partition of cells into clusters, modularity
+measures how separated clusters are from each other, based on the difference
+between the observed and expected weight of edges between nodes. For the whole
+graph, the closer to 1 the better.
+
 ## Pros and Cons of graph based clustering
 
 * Pros:
@@ -165,7 +173,8 @@ for each cell. We can also retrieve the intermediate statistics (varying
 according to the algorithm used) and the SNN graph by specifying the *bluster*
 argument `full = TRUE`. If you are only interested in retrieving the clusters,
 this isn't necessary but in this first instance we will retrieve the graph and
-visualise it.
+visualise it. The default algorithm for clusterCells is Walktrap with k is set 
+to 10 by default. The default edge weighting is “rank”.
 
 ```{r clustercells_default}
 clustering1 <- clusterCells(sce, use.dimred="corrected", full=TRUE)
@@ -233,13 +242,6 @@ plotReducedDim(sce,
                text_by = "Clusters1")
 ```
 
-# Modularity
-
-Several methods to detect clusters ('communities') in networks rely on a metric
-called "modularity". For a given partition of cells into clusters, modularity
-measures how separated clusters are from each other, based on the difference
-between the observed and expected weight of edges between nodes. For the whole
-graph, the closer to 1 the better.
 
 # The Walktrap method
 
@@ -279,14 +281,18 @@ table(sce$walktrap15)
 ```
 
 We can visualise the assignment of cells from different samples to the clusters
-using a heatmap.
+using a heatmap. This gives us an overview of how well each cluster is 
+represented across the samples and the replicates. Several clusters (2, 8, 9 
+and 16) are present in the PBMMC samples, but absent from the ETV6_RUNX1 samples 
+for instance.
+
 
 ```{r heatmap_walktrap_k15, fig.width=4, fig.height=5}
-table(sce$walktrap15, sce$SampleName) %>% 
-  pheatmap(cluster_rows = FALSE, cluster_cols = FALSE)
+w15_table <- log(table(sce$walktrap15, sce$SampleName)+1)
+pheatmap(w15_table, cluster_rows = TRUE, cluster_cols = FALSE)
 ```
 
-Most clusters comprise cells from several replicates of a same sample type,
+Most clusters comprise cells from several replicates of the same sample type,
 cluster 10 appears to be predominantly cells from the ETV6-RUNX samples.
 
 We can visualise this on the TSNE:
@@ -308,7 +314,6 @@ plotReducedDim(sce,
   facet_wrap(vars(SampleGroup))
 ```
 
-## Additional clustering parameters (Advanced)
 
 The different clustering algorithms may have additional parameters, specific to
 the algorithm, that can be adjusted. With the walktrap algorithm we could also
@@ -577,8 +582,8 @@ consider reducing *k*.
 
 ##  Modularity to assess clusters quality
 
-As mentioned early, the modularity metric is used in evaluating the
-separatedness between clusters. Some of the clustering algorithms, e.g. Louvain,
+As mentioned earlier, the modularity metric is used in evaluating the
+separatedness of clusters. Some of the clustering algorithms, e.g. Louvain,
 seek to optimise this for the entire NN graph as part of their cluster
 detection. Modularity is a ratio between the observed weights of the edges
 within a cluster versus the expected weights if the edges were randomly
@@ -631,12 +636,7 @@ plot(cluster.gr,
 
 ## Comparing two sets of clusters
 
-The wide variety of clustering algorithms available and their differing outputs
-reflect the different ways that it is possible to view out data in
-high-dimensional space. It may often be useful to assess the concordance between
-different clustering methods in order to assess how clusters relate to each
-other - e.g. does one cluster from one method equate to just one cluster in the
-other or is it a combination of different clusters. This may be revealing about
+We can assess the concordance between different clustering methods to get a better idea of how they eachtreat the data, e.g. does one cluster from one method equate to just one cluster in the other or is it a combination of different clusters. This may be revealing about
 the underlying biology. We will use the Jaccard index as measure of concordance
 between clusters. A value of 1 represents perfect concordance between clusters
 (i.e. they contain exactly the same cells).
@@ -676,7 +676,7 @@ out <- clusterSweep(reducedDim(sce, "corrected"),
                     BPPARAM=BiocParallel::MulticoreParam(7))
 ```
 
-The resulting object is list containing a DataFrame with the clusters for each
+The resulting object is a list containing a DataFrame with the clusters for each
 combination of the clustering parameters and a corresponding DataFrame showing
 the parameters used to generate each of these:
 
@@ -910,18 +910,14 @@ rownames(sce) <- uniquifyFeatureNames(rowData(sce)$ID, rowData(sce)$Symbol)
 
 ## B-cells markers
 
+Let's look at the expression of the B cell marker CD79A.
+
 ```{r plot_tsne_b_cell_markers, fig.height=6, fig.width=12}
-p1 <- plotReducedDim(sce, 
-               dimred = "TSNE_corrected", 
-               by_exprs_values = "logcounts",
-               colour_by = "MS4A1",
-               text_by = "label")
-p2 <- plotReducedDim(sce, 
+plotReducedDim(sce, 
                dimred = "TSNE_corrected",
                by_exprs_values = "logcounts",
                colour_by = "CD79A",
                text_by = "label")
-p1 + p2
 ```
 
 ```{r plot_expression_b_cell_markers, fig.height=6, fig.width=12}
@@ -929,23 +925,22 @@ plotExpression(sce,
                exprs_values = "logcounts",
                x = "label", 
                colour_by = "label",
-               features=c("MS4A1", "CD79A"))
+               features=c("CD79A"))
 ```
+
+A large number of the clusters seem to represent B cells. This is what we expect from a cancer of B cells
 
 ## Monocyte markers
 
+We have a very clear cluster of monocytes
+
 ```{r plot_tsne_monocyte_markers, fig.height=6, fig.width=12}
-p1 <- plotReducedDim(sce, 
+plotReducedDim(sce, 
                dimred = "TSNE_corrected",
                by_exprs_values = "logcounts",
-               colour_by = "FCGR3A",
+               colour_by = "LYZ",
                text_by = "label")
-p2 <- plotReducedDim(sce, 
-               dimred = "TSNE_corrected", 
-               by_exprs_values = "logcounts",
-               colour_by = "MS4A7",
-               text_by = "label")
-p1 + p2
+
 ```
 
 ```{r plot_expression_monocyte_markers, fig.height=6, fig.width=12}
@@ -953,31 +948,7 @@ plotExpression(sce,
                exprs_values = "logcounts",
                x = "label", 
                colour_by = "label",
-               features=c("FCGR3A", "MS4A7"))
-```
-
-## Dendritic cell markers
-
-```{r plot_tsne_dendritic_cell_markers, fig.height=6, fig.width=12}
-p1 <- plotReducedDim(sce, 
-               dimred = "TSNE_corrected",
-               by_exprs_values = "logcounts",
-               colour_by = "FCER1A",
-               text_by = "label")
-p2 <- plotReducedDim(sce, 
-               dimred = "TSNE_corrected",
-               by_exprs_values = "logcounts",
-               colour_by = "CST3",
-               text_by = "label")
-p1 + p2
-```
-
-```{r plot_expression_dendritic_cell_markers, fig.height=6, fig.width=12}
-plotExpression(sce, 
-               exprs_values = "logcounts",
-               x = "label", 
-               colour_by = "label",
-               features=c("FCER1A", "CST3"))
+               features=c("LYZ"))
 ```
 
 
