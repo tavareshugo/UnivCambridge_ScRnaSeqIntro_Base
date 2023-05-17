@@ -4,6 +4,10 @@
 *.Rproj
 .Rbuildignore
 
+# cache files
+*_cache
+*_files
+
 # MAC files
 *DS_Store
 
