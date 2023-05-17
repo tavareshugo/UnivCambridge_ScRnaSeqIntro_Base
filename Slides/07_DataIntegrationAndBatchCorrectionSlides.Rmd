@@ -1,6 +1,6 @@
 ---
 title: "Data Integration and Batch Correction"
-date: "September 2022"
+date: "May 2023"
 output:
   ioslides_presentation:
     widescreen: true
@@ -192,6 +192,30 @@ Assumptions (quoted from the paper):
 <img src="../Images/batchCor_corTSNE.png" class="left" style="width: 32%; margin-top: 60px;">
 <img src="../Images/batchCor_corUMAP.png" class="right" style="width: 32%; margin-top: 60px;">
 
+## Checking our correction has worked
+
+We can look at the 'mixing' between batches and calculate the variance in the log-normalized cell abundances across batches for each cluster.
+
+Clusters are ranked by variance for manual inspection.
+
+If variance is too high it could indicate there isn't sufficient correction.
+
+```{r echo=FALSE, out.width='85%', fig.align='center'}
+knitr::include_graphics('Images/ExampleBatchVariance.png')
+```
+
+## Checking our correction has worked
+
+```{r echo=FALSE, out.width='40%', fig.align='center'}
+knitr::include_graphics('Images/NestedClustersHeatmap.png')
+```
+
+<div>
+- Investigating which clusters from before correction are nested inside the clusters after correction can help us decide if our correction has worked.
+- Did the whole before cluster from one sample go into an after cluster or was it broken apart?
+- Perfect nesting would be indicated by one orange/red block in each row
+- But do we want that?
+
 ## Checking our correction hasn't over worked
 
 - If you use fastMNN in the absence of a batch effect, it may not work correctly
@@ -201,6 +225,27 @@ Assumptions (quoted from the paper):
 - fastMNN can be instructed to skip the batch correction if the batch effect is below a threshold. You can use the effect sizes it calculates to do this.
 
 - In reality the absence of any batch effect would warrant further investigation.
+
+## Checking our correction hasn't over worked
+
+- One way to measure if we have retained heterogeneity is to look at the agreement between clusters before and after correction
+- Adjusted Rand Index 
+- HIGH = GOOD (eg. 0.8 = within batch variation is retained)
+
+<div>
+
+```{r echo=FALSE, out.width='30%', fig.align='center'}
+knitr::include_graphics('Images/ARIheatmap.png')
+```
+
+- ARI can also be broken down into per-cluster ratios
+
+## Checking our correction hasn't over worked
+
+- There is also an MNN specific metric we can calculate called 'lost variance'
+- How much variance within each batch has been removed by the correction
+- Ideal < 0.1 or 10%
+- Higher levels indicate artificial smoothing of data
 
 ## Using the corrected values
 
