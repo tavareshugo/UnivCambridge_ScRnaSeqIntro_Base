@@ -47,3 +47,12 @@ img.top {
 
 
 .forceBreak { -webkit-column-break-after: always; break-after: column; }
+
+article.smaller p.caption {
+  font-size: 0.5em;
+  color: grey;
+}
+
+article.smaller p.caption a {
+  color: #6c8fb7;
+}

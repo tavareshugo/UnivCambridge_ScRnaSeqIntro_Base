@@ -40,7 +40,12 @@ In dimensionality reduction we attempt to find a way to represent all the the in
 
 Before we start, let's load our packages and read our data in. 
 
-```{r load_packages, eval=FALSE}
+```{r, echo=FALSE}
+# Setup & Data ----
+```
+
+```{r load_packages}
+# load packages
 library(scater) 
 library(scran)
 library(PCAtools)
@@ -52,6 +57,7 @@ We will load the _SingleCellExperiment_ object generated in the
 for 500 cells per sample. For demonstration purposes we are not using the full dataset but you would in your analyses.
 
 ```{r read_data, cache=FALSE}
+# read data
 sce <- readRDS("R_objects/Caron_normalized.500.rds")
 sce
 ```
@@ -65,6 +71,7 @@ Ensembl gene id to symbols where necessary to distinguish between different
 genes.
 
 ```{r set_rownames_to_symbols}
+# use gene symbols as rownames - making sure they are unique
 rownames(sce) <- uniquifyFeatureNames(rownames(sce), rowData(sce)$Symbol)
 ```
 
@@ -94,6 +101,10 @@ variation per gene and to select an appropriate set of highly variable genes
 
 ## Quantifying per-gene variation
 
+```{r, echo=FALSE}
+# Gene variance & HVGs ----
+```
+
 Some assays allow the inclusion of known molecules in a known amount covering a
 wide range, from low to high abundance: spike-ins. The technical noise is
 assessed based on the amount of spike-ins used, the corresponding read counts
@@ -111,6 +122,7 @@ i.e. capturing biologically interesting variation. The `scran` function
 The resulting output gives us a dataframe with all our genes and several columns. It has modeled the mean-variance relationship and from there it has estimated our total variance along with what it considers is the biological and technical variance. 
 
 ```{r mean_variance_model}
+# model gene variance
 gene_var <- modelGeneVar(sce)
 
 gene_var
@@ -120,6 +132,7 @@ We can then plot variance vs mean for each gene and visualise the limit of
 technical variance according to the fitted trend line. We would regard those features below the trend line as technical noise.
 
 ```{r mean_variance_plot}
+# plot gene variable
 gene_var %>% 
   as.data.frame() %>% 
   ggplot(aes(mean, total)) +
@@ -163,6 +176,7 @@ later, rather than spending much time worrying about obtaining the “optimal”
 value.
 
 ```{r get_hvgs}
+# get the most highly variable genes (HGVs)
 hvgs <- getTopHVGs(gene_var, prop=0.1)
 length(hvgs)
 hvgs[1:10]
@@ -177,8 +191,10 @@ We can visualise the expression of the top most-variable genes with a violin
 plot for each gene using the `plotExpression()` function:
 
 ```{r plot_count_HVGtop20}
+# visualise their expression
 plotExpression(sce, features = hvgs[1:20], point_alpha = 0.05)
 ```
+
 
 # Dimensionality Reduction 
 
@@ -244,7 +260,6 @@ first PC.
 And so on: successive PCs each explain a decreasing amount of variance not
 captured by the previous ones.
 
-
 The advantage of using PCA is that the total amount of variance explained by the
 first few PCs is usually enough to capture most of the signal in the data.
 Therefore, we can exclude the remaining PCs without much loss of information.
@@ -252,7 +267,12 @@ The stronger the correlation between the initial variables, the stronger the
 reduction in dimensionality. We will see below how we can choose how many PCs to
 retain for our downstream analysis.
 
+
 ### Running PCA
+
+```{r, echo=FALSE}
+# PCA ----
+```
 
 As discussed in the [Preprocessing and QC](04_Preprocessing_And_QC.html)
 section, _SingleCellExperiment_ objects contain a _slot_ that can store
@@ -268,6 +288,7 @@ Importantly, we can also restrict the PCA to use only some of the features
 genes we identified earlier.
 
 ```{r pca_computation}
+# this returns a new SCE object with a "PCA" reducedDim slot 
 sce <- runPCA(sce, subset_row = hvgs)
 sce
 ```
@@ -276,6 +297,7 @@ We can see that the output shows a new `reducedDimNames` value called "PCA".
 We can access it by using the `reducedDim()` function:
 
 ```{r view_reducedDim}
+# extract a few rows and columns of the PCA matrix
 reducedDim(sce, "PCA")[1:10, 1:5]
 ```
 
@@ -288,8 +310,11 @@ as additional information) attached to the PCA matrix above. The typical way to
 view this information is using what is known as a "scree plot".
 
 ```{r scree_plot}
+# extract the % variance explained by each PC
 percent.var <- attr(reducedDim(sce), "percentVar")
-plot(percent.var, log="y", xlab="PC", ylab="Variance explained (%)")
+
+# visualise as a "scree plot"
+plot(percent.var, log = "y", xlab = "PC", ylab = "Variance explained (%)")
 ```
 
 We can see how the two first PCs explain a substantial amount of the variance,
@@ -299,6 +324,7 @@ To visualise our cells in the reduced dimension space defined by PC1 and PC2, we
 can use the `plotReducedDim()` function.
 
 ```{r pca_plot_1}
+# visualise PCA result - PC1 vs PC2
 plotReducedDim(sce, dimred = "PCA", colour_by = "SampleName")
 ```
 
@@ -308,6 +334,7 @@ profiles.
 We can also plot several PCs at once, using the `ncomponents` option:
 
 ```{r sce_pca_plotReducedDim}
+# grid plot for multiple PCs
 plotReducedDim(sce, dimred = "PCA", ncomponents = 3, colour_by = "SampleName")
 ```
 
@@ -320,6 +347,7 @@ well as `colData` and even `assays` (to plot particular gene's expression).
 Here is an example, where we facet our plot:
 
 ```{r ggcells}
+# Highly customisable plots with ggcells
 ggcells(sce, aes(x = PCA.1, y = PCA.2, colour = SampleName)) +
   geom_point(size = 0.5) +
   facet_wrap(~ SampleName) +
@@ -328,6 +356,10 @@ ggcells(sce, aes(x = PCA.1, y = PCA.2, colour = SampleName)) +
 
 
 ### PCA Diagnostics 
+
+```{r, echo=FALSE}
+# PCA diagnostics ----
+```
 
 There are a large number of potential confounders, artifacts and biases in
 scRNA-seq data. One of the main challenges stems from the fact that it is
@@ -343,6 +375,7 @@ associated plotting function), which calculates the variance in each PC
 explained by those variables we choose:
 
 ```{r explanatory_variables}
+# "correlation" between certain variables and our PCs
 explain_pcs <- getExplanatoryPCs(sce,
                                 variables = c("sum",
                                               "detected",
@@ -362,6 +395,7 @@ model regressing expression values for each gene against just that variable, and
 display a density plot of the gene-wise marginal R2 values for the variables.
 
 ```{r explanatory_variables_correlation_plot}
+# "correlation" between our variables and each gene
 plotExplanatoryVariables(sce,
                          variables = c(
                            "sum",
@@ -381,6 +415,10 @@ downstream analysis.
 
 ### Chosing the number of PCs 
 
+```{r, echo=FALSE}
+# Choosing PCs ----
+```
+
 The choice of the number of PCs we retain for downstream analyses is a decision
 that is analogous to the choice of the number of HVGs to use. Using more PCs
 will retain more biological signal at the cost of including more noise that
@@ -398,6 +436,7 @@ major effect. For example, in our dataset, few PCs explain more than 1% of the
 variance in the entire dataset.
 
 ```{r pcs_with_variance_gt_1, purl=FALSE}
+# number of PCs that explain more than 1% variance
 table(percent.var > 1)
 ```
 
@@ -413,6 +452,7 @@ The most commonly used strategies to choose PCs for downstream analysis include:
 To choose the elbow point in our scree plot, we can use the following:
 
 ```{r choose_elbow}
+# elbow method
 chosen_elbow <- findElbowPoint(percent.var)
 chosen_elbow
 ```
@@ -421,6 +461,7 @@ Here is our scree plot again, but this time with a vertical line indicating the
 elbow point:
 
 ```{r plot_eblow_choice}
+# visualise the cut point on the scree plot
 plot(percent.var)
 abline(v=chosen_elbow, col="dodgerblue")
 ```
@@ -437,7 +478,8 @@ from our mean-variance trend).
 This method is implemented in the `denoisePCA()` function:
 
 ```{r denoisePCA, warning=FALSE}
-sce.denoised <- denoisePCA(sce, technical = gene_var)
+# "denoising" PCA - remove PCs that explain less than technical variance
+sce.denoised <- denoisePCA(sce, technical = gene_var, subset.row = hvgs)
 ```
 
 If we look at our PCA result, we can see that it has 
@@ -555,11 +597,10 @@ directly on our SingleCellExperiment object. We will leave this exploration for
 you to do in the following exercises, but the basic code is very similar to that
 used with PCA. For example, the following would run t-SNE with default options:
 
-```{r basic_tsne}
+```{r basic_tsne, purl=FALSE}
+# basic command to run and visualise t-SNE 
 sce <- runTSNE(sce)
-
 plotTSNE(sce, colour_by = "SampleName")
-
 ```
 
 One thing to note here is that, because of the computational demands of this
@@ -584,13 +625,13 @@ for the exercise. We want to achieve the following:
 affects the results
 
 ```{r exercise1, eval=FALSE}
-# Run t-SNE ----
+# Exercise 1: t-SNE ----
 
 # add the t-SNE result to the reducedDim slot of the SCE object
 # we name this reducedDim "TSNE_perplex50"
 # we set perplexity = 50 (which is the default if we don't specify it)
 # we run t-SNE based on the PCA we ran previously
-# we will use the first 10 principle components
+# we will use the first 10 principal components
 set.seed(123) # set a random seed to ensure reproducibility
 sce <- runTSNE(sce, 
                name = "TSNE_perplex50",
@@ -655,7 +696,7 @@ You can replace values in the perplexity argument of the runTSNE() function.
 
 Here is the complete script: 
 
-```{r exercise1_solution, eval=FALSE}
+```{r exercise1_solution, purl=FALSE, eval=FALSE}
 # Run t-SNE ----
 
 # add the t-SNE result to the reducedDim slot of the SCE object
@@ -779,12 +820,11 @@ only and not for downstream analysis (such as cell clustering)**.
 Running UMAP is very similar to what we've seen already for PCA and t-SNE, only
 the function name changes:
 
-```{r runUMAP}
+```{r runUMAP, purl=FALSE}
 set.seed(123)
 sce <- runUMAP(sce)
 
 plotUMAP(sce, colour_by = "SampleName")
-
 ```
 
 Because this UMAP also involves a series of randomization steps, setting the
@@ -820,7 +860,7 @@ Our main objectives are:
 - Compare how UMAP compares to t-SNE in terms of revealing structure in the data
 
 ```{r exercise2, eval=FALSE}
-# Run UMAP ----
+# Exercise 2: UMAP ----
 
 # Part A
 # run the UMAP with 50 neighbours
@@ -872,7 +912,7 @@ Redraw the TSNE and compare it with your UMAP.
 
 Here is the complete script: 
 
-```{r exercise2_solution, eval=FALSE}
+```{r exercise2_solution, eval=FALSE, purl=FALSE}
 # Run UMAP ----
 
 # run the UMAP with 50 neighbours
