@@ -2,9 +2,10 @@
 title: "Data Integration and Batch Correction"
 date: "May 2023"
 output:
+  beamer_presentation: default
   ioslides_presentation:
-    widescreen: true
-    smaller: true
+    widescreen: yes
+    smaller: yes
     logo: Images/uniOfCamCrukLogos.png
     css: css/stylesheet.css
 ---
@@ -18,11 +19,17 @@ knitr::include_graphics('Images/workflow2_dataSetIntegra.png')
 
 ## Why do we need to think about data integration?
 
-- Practicalities of our Experimental Design
-
-- Different 10X runs at different times OR just the same sample run twice
-
-- Obscure real biological changes
+- There are generally three reasons for this
+  - **Batch effects**: 
+    - Process samples in batches, different dates, different technicians, different technologies etc
+  - **Biological effects**: 
+    - A study involving male and female subjects with the same disease will often have gender-specific clusters when visualized using t-SNE. 
+    - Need to integrate to remove the "gender" effect and to identify shared cell types.
+  - **Distinct cellular modalities**: 
+    - For examples for the same study one may profile single cell level transcriptomics or spatial transcriptomics or single cell's immunophenotype
+    - Integration is required to to get comprehensive functional understanding of these data sets.
+    
+  
 
 ## Data Integration Workflow
 
