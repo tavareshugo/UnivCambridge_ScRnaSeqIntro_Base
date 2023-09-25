@@ -1,14 +1,14 @@
 ---
 title: "Clustering"
 date: "January 2023"
-author: "Adam Reid and Stephane Ballereau"
+author: "Chandra Chilamakuri, Adam Reid and Stephane Ballereau"
 output:
-  beamer_presentation: default
   ioslides_presentation:
     widescreen: yes
     smaller: yes
     logo: Images/uniOfCamCrukLogos.png
     css: css/stylesheet.css
+  beamer_presentation: default
 ---
 
 ```{r include=FALSE}
@@ -34,8 +34,19 @@ usually using the PCA output
 
 * annotation of cell-types based on transcription profiles
 
-## Graph-based clustering
 
+## Clustering methods
+
+* Roughly classified into four categories
+  * k-means clustering
+  * hierarchical clustering
+  * density-based clustering
+  * Graph-based clustering
+
+* First three methods dose not scale well for the large data sets. 
+* Data from single cells is best clustered using a graph-based approach, as it is faster and more efficient.
+
+## Graph-based clustering
 
 Pros
 
@@ -43,23 +54,7 @@ Pros
   * no assumptions on the shape of the clusters or the distribution of cells
   within each cluster compared to e.g. k-means or gaussian mixture models
   * no need to specify a number of clusters to identify
-  
-```{r, include=FALSE}
-require(igraph)
-g <- make_graph( ~ A-C:D:F:G:H, B-D:E:F:H:I)
-cols <- c("red", "red",
-          "orange", "lightblue", "orange",
-          "lightblue",
-          "orange", "lightblue", "orange")
-```
 
-```{r, fig.width = 3, fig.height = 3, echo=FALSE, out.extra='style="float:right; #padding:2px"'}
-plot.igraph(
-  g, layout = layout_with_fr(g),
-  vertex.size = 40,
-   vertex.label=NA,
-)
-```
 
 Cons
 
@@ -68,11 +63,9 @@ Cons
 
 The steps of involved:
 
-1. Identify edges between nodes (cells) to generate a graph
-
-2. Weight the edges with a similarity score
-
-3. Identify clusters/communities in the weighted graph
+```{r, echo=FALSE, out.height='30%', out.width = '60%', out.extra='style="float:center; padding:10px"'}
+knitr::include_graphics("../Images/graph_based_clustering_overview.png", auto_pdf = TRUE)
+```
 
 ## Making a graph
 
@@ -107,6 +100,23 @@ knitr::include_graphics("../Images/bioCellGenGraphDeng2.png", auto_pdf = TRUE)
 ```
 
 ## Identifying communities/clusters {.smaller}
+
+
+```{r, echo=FALSE,out.width = '30%', out.extra='style="float:right; #padding:10px"'}
+knitr::include_graphics("../Images/community.png", auto_pdf = TRUE)
+```
+
+* What makes a community?
+
+  * A community is a cohesive subgroup within a network has following characteristics
+    * **Mutual ties**: Most of the members are tied to one another within a community.
+    * **Compactness**: A small number of steps are required to reach a group members within a community.
+    * **High density of ties**: High density of ties with in a community.
+    * **Separation**: High frequency of ties with in a community members when compared to non-members.
+
+
+## community detection algorithms
+
 Here we will address three community detection algorithms: **walktrap**, **louvain** and **leiden**.
 
 **Modularity**
