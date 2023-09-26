@@ -3,12 +3,12 @@ title: "Clustering"
 date: "January 2023"
 author: "Chandra Chilamakuri, Adam Reid and Stephane Ballereau"
 output:
+  beamer_presentation: default
   ioslides_presentation:
     widescreen: yes
     smaller: yes
     logo: Images/uniOfCamCrukLogos.png
     css: css/stylesheet.css
-  beamer_presentation: default
 ---
 
 ```{r include=FALSE}
@@ -61,7 +61,7 @@ Cons
   * loss of information beyond neighboring cells, which can affect community
   detection in regions with many cells.
 
-The steps of involved:
+The steps involved:
 
 ```{r, echo=FALSE, out.height='30%', out.width = '60%', out.extra='style="float:center; padding:10px"'}
 knitr::include_graphics("../Images/graph_based_clustering_overview.png", auto_pdf = TRUE)
