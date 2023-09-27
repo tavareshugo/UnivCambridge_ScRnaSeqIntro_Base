@@ -105,7 +105,34 @@ sce_quick_mnn %>%
   runTSNE(dimred = "corrected") %>%
   plotTSNE(colour_by = "batch")
 
-## EXERCISE 1 ##
+## EXERCISE 1 #
+
+
+# load the data
+sce_all <- readRDS("R_objects/Caron_dimRed.500.rds")
+
+# tabulate the number of cells per sample
+table(sce_all$SampleName)
+
+
+# obtain a batch-corrected SCE object
+sce_all_corrected <- quickCorrect(sce_all, batch = sce_all$SampleName)$corrected
+
+# add the corrected matrix to the original object - to keep it all together
+reducedDim(sce_all, "corrected") <- reducedDim(sce_all_corrected, "corrected")
+
+#  add a tSNE using the corrected data
+set.seed(323)
+sce_all <- runTSNE(sce_all, 
+                   dimred = "corrected",
+                   name = "TSNE_corrected")
+
+# visualise both corrected and uncorrected
+plotReducedDim(sce_all, dimred = "TSNE", colour_by = "SampleName")
+
+
+
+#
 
 # Applying a merge order during correction
 
