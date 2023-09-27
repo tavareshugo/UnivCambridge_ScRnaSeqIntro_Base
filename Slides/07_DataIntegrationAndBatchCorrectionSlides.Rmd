@@ -2,12 +2,12 @@
 title: "Data Integration and Batch Correction"
 date: "May 2023"
 output:
-  beamer_presentation: default
   ioslides_presentation:
     widescreen: yes
     smaller: yes
     logo: Images/uniOfCamCrukLogos.png
     css: css/stylesheet.css
+  beamer_presentation: default
 ---
 
 
