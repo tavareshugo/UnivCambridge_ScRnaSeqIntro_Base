@@ -86,7 +86,7 @@ plotReducedDim(sce,
 data.frame(Cluster = sce$cluster_uncorrected, Batch = sce$batch) %>%
   ggplot(aes(x = Cluster)) +
     geom_bar(aes(fill = Batch), position = "fill") +
-    labs(title = "MNN-corrected data") +
+    labs(title = "MNN-uncorrected data") +
   scale_y_continuous(labels = scales::percent)
 
 data.frame(Cluster = sce$cluster_corrected, Batch = sce$batch) %>%
