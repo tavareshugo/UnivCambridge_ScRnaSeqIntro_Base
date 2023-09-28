@@ -41,7 +41,7 @@ ggcells(sce, aes(x = TSNE_perplex50.1, y = TSNE_perplex50.2,
 ## # Re-run the algorithm but change the random seed number.
 ## # Do the results change dramatically between runs?
 
-FIXME
+YOUR CODE HERE
 
  ## 
 ## # Part B
@@ -51,20 +51,20 @@ FIXME
 ## # CD3D (T cells)
 ## # HBA1 (erythrocytes)
 
-FIXME
+YOUR CODE HERE
 
 ## 
 ## # Part C
 ## # Facet these plots by SampleName to better understand where each marker is mostly expressed
 
-FIXME
+YOUR CODE HERE
 
 ## 
 ## # Part D
 ## # Explore different perplexity values (for example 5 and 500)
 ## # Do you get tighter or looser clusters?
 
-FIXME
+YOUR CODE HERE
 
 # Exercise 2
 
@@ -76,24 +76,24 @@ set.seed(123) # set seed for reproducibility
 sce <- runUMAP(sce,
                name = "UMAP_neighbors50",
                dimred = "PCA",
-               FIXME)
+               ********YOUR CODE HERE********)
 
 ## 
 ## # Part B
 ## # visualise the resulting UMAP projection (colour cells by sample)
 
-FIXME
+YOUR CODE HERE
 
 ## 
 ## # Part C
 ## # run the UMAP with 5 and 500 neighbours and compare the results
 
-FIXME
+YOUR CODE HERE
 
 ## 
 ## # Part D
 ## # compare the UMAP projection with the t-SNE projections
 ## # would you prefer one over the other?
 
-FIXME
+YOUR CODE HERE
 
