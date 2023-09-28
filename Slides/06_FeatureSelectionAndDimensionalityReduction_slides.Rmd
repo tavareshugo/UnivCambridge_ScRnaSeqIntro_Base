@@ -201,11 +201,7 @@ knitr::include_graphics('Images/dim_red_graph_based.png')
 
 * Based on topological structures in multidimensional space 
 
-* Unlike tSNE, you can compute the structure once (no randomization)
-
-  - faster 
-  
-  - you could add data points without starting over
+* Faster and less computationally intensive than tSNE
   
 * Preserves the global structure better than t-SNE 
 
