@@ -15,6 +15,7 @@ library(scater)
 library(scran)
 library(PCAtools)
 library(tidyverse)
+library(patchwork)
 
 knitr::opts_chunk$set(error=FALSE, 
                       message=FALSE, 
@@ -50,6 +51,7 @@ library(scater)
 library(scran)
 library(PCAtools)
 library(tidyverse)
+library(patchwork)
 ```
 
 We will load the _SingleCellExperiment_ object generated in the
@@ -624,14 +626,16 @@ for the exercise. We want to achieve the following:
 - Explore how the main tuneable parameter of the algorithm - perplexity -
 affects the results
 
-```{r exercise1, eval=FALSE}
-# Exercise 1: t-SNE ----
+##### Run t-SNE {-}
 
-# add the t-SNE result to the reducedDim slot of the SCE object
-# we name this reducedDim "TSNE_perplex50"
-# we set perplexity = 50 (which is the default if we don't specify it)
-# we run t-SNE based on the PCA we ran previously
-# we will use the first 10 principal components
+1. Add the t-SNE result to the reducedDim slot of the SCE object. 
+2. Name this reducedDim "TSNE_perplex50". 
+3. Set perplexity = 50 (which is the default if we don't specify it). 
+4. Run t-SNE based on the PCA we ran previously using the first 10 principal
+components. 
+5. Plot the PCA results ussing `ggcells` and colour the points by *SampleName*. 
+
+```{r exercise1, eval=FALSE}
 set.seed(123) # set a random seed to ensure reproducibility
 sce <- runTSNE(sce, 
                name = "TSNE_perplex50",
@@ -639,84 +643,32 @@ sce <- runTSNE(sce,
                dimred = "PCA",
                n_dimred = 10)
 
-# Make a custom visualisation using ggcells
-ggcells(sce, aes(x = TSNE_perplex50.1, y = TSNE_perplex50.2, 
+ggcells(sce, aes(x = TSNE_perplex50.1, 
+                 y = TSNE_perplex50.2, 
                  colour = SampleName)) +
   geom_point()
-
-# Part A
-# Re-run the algorithm but change the random seed number. 
-# Do the results change dramatically between runs?
-FIXME
-
-# Part B
-# Instead of colouring by SampleName, colour by expression of known cell markers
-# CD79A (B cells)
-# CST3 (monocytes)
-# CD3D (T cells) 
-# HBA1 (erythrocytes)
-FIXME
-
-# Part C
-# Facet these plots by SampleName to better understand where each marker is mostly expressed
-FIXME
-
-# Part D
-# Explore different perplexity values (for example 5 and 500)
-# Do you get tighter or looser clusters?
-FIXME
 ```
 
 
-<details><summary>Hint A</summary>
+##### Part A {-}
+
+* Re-run the algorithm but change the random seed number and generate a plot of 
+the new reduction.   
+* Do the results change dramatically between runs?
+
+```{r exercise1a, eval=FALSE}
+YOUR CODE HERE
+```
+
+<details><summary>Hint</summary>
 
 Look at the set.seed() function
 
 </details>
 
-<details><summary>Hint B</summary>
-
-You can replace what we colour by with any of the gene names in our dataset as they are stored as the rownames in our object.
-
-</details>
-
-<details><summary>Hint C</summary>
-
-The function facet_wrap() can be used to modify ggplots as we did earlier.
-
-</details>
-
-<details><summary>Hint D</summary>
-
-You can replace values in the perplexity argument of the runTSNE() function.
-
-</details>
-
 <details><summary>Answer</summary>
 
-Here is the complete script: 
-
-```{r exercise1_solution, purl=FALSE, eval=FALSE}
-# Run t-SNE ----
-
-# add the t-SNE result to the reducedDim slot of the SCE object
-# we name this reducedDim "TSNE_perplex50"
-# we set perplexity = 50 (which is the default if we don't specify it)
-# we run t-SNE based on the PCA we ran previously
-set.seed(123) # set a random seed to ensure reproducibility
-sce <- runTSNE(sce, 
-               name = "TSNE_perplex50",
-               perplexity = 50, 
-               dimred = "PCA",
-               n_dimred = 10)
-
-# Make a custom visualisation using ggcells
-ggcells(sce, aes(x = TSNE_perplex50.1, y = TSNE_perplex50.2, 
-                 colour = SampleName)) +
-  geom_point()
-
-# Re-run the algorithm but change the random seed number. 
-# Do the results change dramatically between runs?
+```{r answer1a, eval=FALSE}
 set.seed(321)
 sce <- runTSNE(sce, 
                name = "TSNE_perplex50_seed321",
@@ -727,25 +679,91 @@ sce <- runTSNE(sce,
 ggcells(sce, aes(x = TSNE_perplex50_seed321.1, y = TSNE_perplex50_seed321.2, 
                  colour = SampleName)) +
   geom_point()
+```
 
+</details>
 
-# Modify the visualisation to colour the points based on logcounts of known cell markers
-# CD79A (B cells)
-# CST3 (monocytes)
-# CD3D (T cells) 
-# HBA1 (erythrocytes)
-ggcells(sce, aes(x = TSNE_perplex50_seed321.1, y = TSNE_perplex50_seed321.2, 
+##### Part B {-}
+
+Instead of colouring by *SampleName* colour by expression of known cell markers:
+
+* CD79A (B cells)
+* CST3 (monocytes)
+* CD3D (T cells) 
+* HBA1 (erythrocytes)
+
+```{r exercise1b, eval=FALSE}
+YOUR CODE HERE
+```
+
+<details><summary>Hint</summary>
+
+You can replace what we colour by with any of the gene names in our dataset 
+as they are stored as the rownames in our object.
+
+</details>
+
+<details><summary>Answer</summary>
+
+e.g for CD79A:
+
+```{r answer1b, eval=FALSE}
+ggcells(sce, aes(x = TSNE_perplex50_seed321.1, 
+                 y = TSNE_perplex50_seed321.2, 
                  colour = CD79A)) +
   geom_point()
+```
 
-# Facet these plots by SampleName to better understand where each marker is mostly expressed
+</details>
+
+
+##### Part C {-}
+
+Facet these plots by SampleName to better understand where each marker is mostly
+expressed
+
+```{r exercise1c, eval=FALSE}
+YOUR CODE HERE
+```
+
+<details><summary>Hint</summary>
+
+The function facet_wrap() can be used to modify ggplots as we did earlier.
+
+</details>
+
+<details><summary>Answer</summary>
+
+```{r answer1c, eval=FALSE}
 ggcells(sce, aes(x = TSNE_perplex50_seed321.1, y = TSNE_perplex50_seed321.2, 
                  colour = CD79A)) +
   geom_point() +
   facet_wrap(~ SampleName)
+```
 
-# Explore different perplexity values (for example 5 and 500)
-# Do you get tighter or looser clusters?
+</details>
+
+##### Part D {-}
+
+Rerun the t-SNE using different perplexity values (for example 5 and 500)
+
+* Do you get tighter or looser clusters?
+
+```{r exercise1d, eval=FALSE}
+YOUR CODE HERE
+```
+
+<details><summary>Hint</summary>
+
+You can replace values in the perplexity argument of the runTSNE() function.
+
+</details>
+
+<details><summary>Answer</summary>
+
+First re-run the t-SNE with different perplexity levels
+
+```{r answer1d1, eval=FALSE}
 set.seed(321)
 sce <- runTSNE(sce, 
                name = "TSNE_perplex5",
@@ -757,22 +775,28 @@ sce <- runTSNE(sce,
                perplexity = 500, 
                dimred = "PCA",
                n_dimred = 10)
+```
 
-# visualise
-ggcells(sce, aes(x = TSNE_perplex5.1, y = TSNE_perplex5.2, 
-                 colour = SampleName)) +
-  geom_point() +
-  labs(title = "Perplexity 5")
+Then visualise using `ggcells`
 
-ggcells(sce, aes(x = TSNE_perplex50.1, y = TSNE_perplex50.2, 
-                 colour = SampleName)) +
-  geom_point() +
-  labs(title = "Perplexity 50")
+```{r answer1d2, eval=FALSE}
+tsne_5 <- ggcells(sce, aes(x = TSNE_perplex5.1, 
+                           y = TSNE_perplex5.2, 
+                           colour = SampleName)) +
+              geom_point() +
+              labs(title = "Perplexity 5")
 
-ggcells(sce, aes(x = TSNE_perplex500.1, y = TSNE_perplex500.2, 
-                 colour = SampleName)) +
-  geom_point() +
-  labs(title = "Perplexity 500")
+tsne_50 <- ggcells(sce, aes(x = TSNE_perplex50.1, 
+                            y = TSNE_perplex50.2, 
+                            colour = SampleName)) +
+              geom_point() +
+              labs(title = "Perplexity 50")
+
+tsne_500 <- ggcells(sce, aes(x = TSNE_perplex500.1,
+                             y = TSNE_perplex500.2, 
+                             colour = SampleName)) +
+              geom_point() +
+              labs(title = "Perplexity 500")
 ```
 
 Some things to note from our data exploration: 
