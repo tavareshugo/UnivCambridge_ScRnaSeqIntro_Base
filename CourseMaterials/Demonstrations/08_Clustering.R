@@ -122,7 +122,10 @@ plotSilBeeswarm <- function(silDat){
         ggbeeswarm::geom_quasirandom(method="smiley", alpha=0.6) +
         theme_bw()
   
-  plt <- scater:::.resolve_plot_colours(plt, silTab$closestCluster, "closestCluster")
+  plt <- plt + scale_color_manual(
+    values = scater:::.get_palette("tableau20"),
+    name = "closestCluster")
+  
   plt
 }
 
