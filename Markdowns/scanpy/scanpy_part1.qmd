@@ -13,6 +13,7 @@ format:
     toc: true
     toc-location: left
     number-sections: true
+    embed-resources: true
 ---
 
 ## Setting up
