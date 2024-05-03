@@ -1,0 +1,526 @@
+---
+title: "Introduction to single-cell RNA-seq analysis"
+subtitle: "Python/scanpy workflow"
+jupyter:
+  kernelspec:
+    name: "conda-env-scverse-py"
+    language: "python"
+    display_name: "scverse"
+execute: 
+  cache: true
+format:
+  html:
+    toc: true
+    toc-location: left
+    number-sections: true
+---
+
+## Setting up
+
+```{python}
+import numpy as np
+from scipy.stats import median_abs_deviation
+from scipy.sparse import csr_matrix
+import pandas as pd
+import scanpy as sc
+import anndata as ad
+import pybiomart as bm
+import seaborn as sns
+
+# set plotting theme
+sns.set_theme()
+```
+
+```{python}
+#| echo: false
+import os
+os.chdir("../../course_files")
+```
+
+We are working with data from [Caron et al. 2020](https://doi.org/10.1038/s41598-020-64929-x), investigating the transcriptional profile of different types of childhood acute lymphoblastic leukemia (ALL). 
+There are different subtypes of ALL, with the two main groups being B-cell lymphoblastic leukemia (affecting immature B-cell lymphocytes) and T-cell lymphoblastic leukemia (affecting immature T-cell lymphocytes). 
+Within each of these broad types, there are further classifications based on commonly observed genetic changes such as large chromosomal rearragements. 
+
+In this dataset ([SRA Accession PRJNA548203](https://www.ncbi.nlm.nih.gov/bioproject/?term=PRJNA548203)), we have 4 groups of samples: 
+
+* `ETV6-RUNX1` (4 replicates): samples from a type of B-cell precursor ALL characterised by a translocation between chromosomes 12 and 21 known as the _t(12;21) ETV6/RUNX1_ rearrangement.
+* `HHD` (2 replicates): also a type of B-cell precursor ALL, where extra chromosomes are gained and known as the "high hyper diploid" type.
+* `PRE-T` (2 replicates): a type of T-cell precursor ALL.
+* `PBMMC` (3 replicates): control samples from healthy pediatric bone marrow mononuclear cells.
+
+We will start by showing how to read and preprocessing the data for one of these samples only. 
+We will then show how to apply the preprocessing to all samples, after which we integrate them together taking into account batch effects inherent to these type of data. 
+
+
+## Reading data
+
+We start by reading the data using one of the read functions from `scanpy` ([documented here](https://scanpy.readthedocs.io/en/stable/api/reading.html)). 
+In our case, we have our data as matrices from CellRanger, so we use the function `sc.read_10x_mtx()`, which takes a directory as its input. 
+We read one of the replicates of the ETV6/RUNX1 subtype:
+
+```{python}
+ETV6_RUNX1_1 = sc.read_10x_mtx("Data/CellRanger_Outputs/SRR9264343/outs/filtered_feature_bc_matrix/")
+```
+
+This returns an object of class `AnnData`: 
+
+```{python}
+ETV6_RUNX1_1
+```
+
+This object stores several pieces of information, including: 
+
+- A matrix of raw counts, with samples as rows and genes as columns. This can be retrived with the `.X` accessor.
+- Metadata about the barcodes (cells), which can be retrieved using the `.obs` accessor. 
+- Metadata about the genes, which can be retrived using the `.var` accessor.
+
+In the output above, we get indication of the number of barcodes (`n_obs`) and genes (`n_vars`). 
+
+![Diagram of the AnnData object type. [Source](https://scanpy.readthedocs.io/en/stable/usage-principles.html)](https://falexwolf.de/img/scanpy/anndata.svg)
+
+
+## Gene annotation
+
+```{python}
+ETV6_RUNX1_1.var
+```
+
+We can see that our gene ids use ENSEMBL identifiers. 
+For each of these identifiers, we would like to know information about common gene names and also the chromosome, so we can identify mitochondrial genes. 
+
+We will use the `pybiomart` package, which accesses the Biomart database containing information about genes for many species. 
+You can learn more about the package usage from [its documentation](https://jrderuiter.github.io/pybiomart/usage.html). 
+
+```{python}
+#| echo: false
+#| eval: false
+server = bm.Server(host="http://www.ensembl.org")
+server.list_marts()
+mart = server["ENSEMBL_MART_ENSEMBL"]
+mart.list_datasets()
+dataset = mart["hsapiens_gene_ensembl"]
+dataset
+```
+
+```{python}
+# connect to the Human genes database (GRCh38.p14)
+h38_mart = bm.Dataset(name="hsapiens_gene_ensembl",
+                      host="http://www.ensembl.org")
+
+# retrieve gene information
+h38_genes = h38_mart.query(attributes=["ensembl_gene_id", "external_gene_name", "chromosome_name"])
+
+# rename the columns
+h38_genes = h38_genes.rename(columns={"Gene stable ID": "gene_ids", "Gene name": "gene_name", "Chromosome/scaffold name": "chrom"})
+```
+
+This returns a Pandas DataFrame object: 
+
+```{python}
+h38_genes
+```
+
+We can now merge this DataFrame with the DataFrame from our AnnData metadata: 
+
+```{python}
+gene_annot = (
+  ETV6_RUNX1_1.var
+  .merge(h38_genes, how="left", on="gene_ids")
+  .set_axis(ETV6_RUNX1_1.var.index)
+)
+```
+
+Finally, we re-annotate our AnnData, being careful to ensure the order of our genes is the same as in the original AnnData object: 
+
+```{python}
+ETV6_RUNX1_1.var = gene_annot.loc[ETV6_RUNX1_1.var_names]
+```
+
+We will keep only genes in the autosomes, X, Y and MT chromosome (i.e. remove genes in unassembled scaffolds):
+
+```{python}
+vars_to_keep = (
+  ETV6_RUNX1_1.var["chrom"]
+  .isin([str(i) for i in range(1, 23)] + ["X", "Y", "MT"])
+)
+ETV6_RUNX1_1 = ETV6_RUNX1_1[:, vars_to_keep].copy()
+```
+
+Note the use of the `.copy()` method. 
+This ensures that we make a new copy of the object (which we replace back into `ETV6_RUNX1_1`), rather than a "View" of the original object. 
+
+Finally, we create a variable in our gene metadata to indicate whether a gene is mitochondrial or not. 
+We will use this later on when we do quality control. 
+
+```{python}
+ETV6_RUNX1_1.var["mt"] = ETV6_RUNX1_1.var["chrom"] == "MT"
+```
+
+
+## Filtering
+
+We start by doing some exploratory analysis of our raw count data, namely in terms of:
+
+- number of total counts per barcode
+- number of detected genes per barcode
+- fraction of counts in mitochondrial genes
+
+```{python}
+sc.pp.calculate_qc_metrics(
+    ETV6_RUNX1_1, 
+    qc_vars=["mt"], 
+    inplace=True, 
+    percent_top=[20], 
+    log1p=True
+)
+ETV6_RUNX1_1
+```
+
+This function added several metrics for each barcode, i.e. our observations: 
+
+```{python}
+ETV6_RUNX1_1.obs
+```
+
+And also to our genes, i.e. variables: 
+
+```{python}
+ETV6_RUNX1_1.var
+```
+
+
+### Filtering barcodes
+
+Since `ETV6_RUNX1_1.obs` is a regular DataFrame, we can use standard plotting libraries to visualise these statistics. 
+For example, using the popular Seaborn library: 
+
+```{python}
+sns.displot(ETV6_RUNX1_1.obs, x="total_counts", bins=100)
+sns.displot(ETV6_RUNX1_1.obs, x="pct_counts_mt", bins=100)
+sns.scatterplot(ETV6_RUNX1_1.obs, x="total_counts", y="n_genes_by_counts", hue="pct_counts_mt")
+```
+
+Alternatively, we can use `scanpy`'s own plotting functions (histogram is not available, but we can do violin plots instead):
+
+```{python}
+sc.pl.violin(ETV6_RUNX1_1, "total_counts")
+sc.pl.violin(ETV6_RUNX1_1, "pct_counts_mt")
+sc.pl.scatter(ETV6_RUNX1_1, "total_counts", "n_genes_by_counts", color="pct_counts_mt")
+```
+
+We can even do several violin plots at once: 
+
+```{python}
+sc.pl.violin(
+  ETV6_RUNX1_1,
+  ["n_genes_by_counts", "total_counts", "pct_counts_mt"],
+  multi_panel=True
+)
+```
+
+We can filter our object based on hard thresholds set manually. 
+Alternatively, we can define a function that removes outliers based on the observed distribution:
+
+```{python}
+def is_outlier(adata, metric: str, nmads: int):
+  M = adata.obs[metric]
+  
+  outlier = (M < np.median(M) - nmads * median_abs_deviation(M)) | (
+      np.median(M) + nmads * median_abs_deviation(M) < M
+  )
+  return outlier
+```
+
+The function returns `True` or `False` depending on whether the value exceeds the specified value of median absolute deviation. 
+For example: 
+
+```{python}
+# create barcode metadata column indicating counts outliers
+ETV6_RUNX1_1.obs["counts_outlier"] = is_outlier(ETV6_RUNX1_1, "log1p_total_counts", 5)
+
+# visualise
+sns.displot(ETV6_RUNX1_1.obs, x="log1p_total_counts", hue="counts_outlier", multiple="stack")
+```
+
+Note that we used the log-transformed counts, as its distribution is less skewed and therefore more suitable for the MAD-based filtering we are doing. 
+
+We can repeat this for number of detected genes (also log-transformed) and the percentage of counts in the two 20 genes:
+
+```{python}
+ETV6_RUNX1_1.obs["genes_outlier"] = is_outlier(ETV6_RUNX1_1, "log1p_n_genes_by_counts", 5)
+sns.displot(ETV6_RUNX1_1.obs, x="log1p_n_genes_by_counts", hue="genes_outlier", multiple="stack")
+```
+
+```{python}
+ETV6_RUNX1_1.obs["topgenes_outlier"] = is_outlier(ETV6_RUNX1_1, "pct_counts_in_top_20_genes", 5)
+sns.displot(ETV6_RUNX1_1.obs, x="pct_counts_in_top_20_genes", hue="topgenes_outlier", multiple="stack")
+```
+
+We also check for outliers with regards to percentage of mitochondrial counts, where we use more strict filters: 
+
+```{python}
+ETV6_RUNX1_1.obs["mito_outlier"] = is_outlier(ETV6_RUNX1_1, "pct_counts_mt", 3) | (ETV6_RUNX1_1.obs["pct_counts_mt"] > 8)
+sns.displot(ETV6_RUNX1_1.obs, x="pct_counts_mt", hue="mito_outlier", multiple="stack")
+```
+
+Finally, we create a variable which is the union of these conditions, i.e. if the barcode is determined an outlier of _any_ of our filters, then we consider it to be an outlier: 
+
+```{python}
+ETV6_RUNX1_1.obs["outlier"] = ETV6_RUNX1_1.obs["genes_outlier"] | ETV6_RUNX1_1.obs["genes_outlier"] | ETV6_RUNX1_1.obs["topgenes_outlier"] | ETV6_RUNX1_1.obs["mito_outlier"]
+
+ETV6_RUNX1_1.obs["outlier"].value_counts()
+```
+
+We can visualise our scatterplot of counts vs detected genes to see which barcodes will be removed: 
+
+```{python}
+sns.scatterplot(ETV6_RUNX1_1.obs, 
+                x = "total_counts", 
+                y = "n_genes_by_counts",
+                hue = "outlier")
+```
+
+Finally, we remove these barcodes from downstream analysis (note the `~` operator _negates_ the True/False variable, as we want to keep the barcodes where the "outlier" column is False):
+
+```{python}
+ETV6_RUNX1_1 = ETV6_RUNX1_1[~ETV6_RUNX1_1.obs["outlier"], :].copy()
+```
+
+The barcodes we are left with after this filtering we will now consider to be cells. 
+
+
+### Filtering genes
+
+In the same way that we explored several metrics for barcodes, we can also explore them for genes. 
+However, as we will see, downstream analysis can focus on variable genes and will mostly ignore genes for which there is very little data. 
+Therefore, we don't perform as strict filtering on genes as we do on barcodes.  
+
+Still, it is useful to remove undetected genes, i.e. those with zero total counts:
+
+```{python}
+# count of genes with zero counts
+ETV6_RUNX1_1.var["total_counts"].eq(0).value_counts()
+```
+
+We can use the `sc.pp.filter_genes()` function to do this
+
+```{python}
+sc.pp.filter_genes(ETV6_RUNX1_1, min_counts=0)
+
+# check number  of genes left
+ETV6_RUNX1_1.n_vars
+```
+
+
+### Ambient RNA and doublets
+
+TODO
+
+
+## Normalisation
+
+There are several normalisation methods available for single-cell RNA-seq data. 
+Two of those methods are: 
+
+- **Pearson residuals:** this method models the count data using a negative binomial regression model to regress out the effects of total count differences between cells and uses the residuals from the model as the normalised count values. 
+- **Shifted logarithm:** scales the counts by a cell-specific size factor (based on the total counts in that cell) followed by taking its logarithm. Despite being a relatively simple method, it has been shown to perform well in downstream analysis such as dimensionality reduction and clustering.
+
+We will use the `layers` component of the AnnData object, which can be used to store different versions of our count matrix. 
+This is a good way to keep several versions of our data in place, especially as we explore different methods of normalisation.
+
+```{python}
+# keep a copy of the raw counts in the object as a backup
+ETV6_RUNX1_1.layers["counts"] = ETV6_RUNX1_1.X.copy()
+
+# create a new layer for Pearson residuals
+ETV6_RUNX1_1.layers["pearson"] = ETV6_RUNX1_1.X.copy()
+sc.experimental.pp.normalize_pearson_residuals(ETV6_RUNX1_1, layer="pearson")
+# convert to sparse matrix (efficient and saves memory)
+ETV6_RUNX1_1.layers["pearson"] = csr_matrix(ETV6_RUNX1_1.layers["pearson"])
+
+# create new layer for log-normalised counts
+ETV6_RUNX1_1.layers["logcounts"] = ETV6_RUNX1_1.X.copy()
+sc.pp.normalize_total(ETV6_RUNX1_1, layer="logcounts", target_sum=None)
+sc.pp.log1p(ETV6_RUNX1_1, layer="logcounts")
+```
+
+We can visualise the distributions and correlations of the normalised data as a pair plot:
+
+```{python}
+# note: np.nansum() only works in regular matrix, so we coerce from the sparse matrix format
+sns.pairplot(
+  pd.DataFrame({"Raw counts": np.nansum(ETV6_RUNX1_1.layers["counts"].toarray(), 1),
+              "Log-normalised counts": np.nansum(ETV6_RUNX1_1.layers["logcounts"].toarray(), 1),
+              "Pearson residuals": np.nansum(ETV6_RUNX1_1.layers["pearson"].toarray(), 1)})
+)
+```
+
+As we can see, while the log-normalised data is fairly well correlated with the original counts, the Pearson residuals are not. 
+This is because the Pearson residuals represent the output of a model taking into account the total counts of the cell, thus the values represent whether the expression is above or below the expected value of expression for that gene. 
+
+There is no "right method" when it comes to normalisation, and often several methods should be explored, alongside a knowledge of the biology. 
+The Pearson residuals normalisation is argued to capture more of the relevant biological signal ([Lause et al. 2021](https://doi.org/10.1186/s13059-021-02451-7)) and the [Scanpy documentation](https://scanpy.readthedocs.io/en/stable/tutorials/experimental/pearson_residuals.html) gives details about using this normalisation for downstream analysis. 
+
+However, as this method is computationally more demanding, we will proceed with the log normalisation. 
+
+
+## Preprocessing workflow
+
+Now that we have explored these things with a single sample, we can bring it all together to process all our samples. 
+We will define a function that performs the preprocessing steps covered: 
+
+* Read the CellRanger matrix
+* Add gene annotation
+* Filter barcodes based on different metrics
+* Normalise the counts (using the simpler log-normalisation)
+
+```{python}
+def sc_preprocess(file: str, gene_annot: pd.DataFrame):
+  
+  print("Reading data matrix")
+  adata = sc.read_10x_mtx(file)
+  
+  print("Adding gene metadata")
+  gene_annot = adata.var.merge(gene_annot, how="left", on="gene_ids")
+  gene_annot = gene_annot.set_index(adata.var.index)
+  
+  if (adata.var["gene_ids"] == gene_annot["gene_ids"]).all():
+    adata.var = gene_annot
+  else: 
+    print("The gene order was not the same!")
+    return
+  
+  vars_to_keep = adata.var["chrom"].isin([str(i) for i in range(1, 23)] + ["X", "Y", "MT"])
+  adata = adata[:, vars_to_keep].copy()
+
+  adata.var["mt"] = adata.var["chrom"] == "MT"
+
+  print("Calculating QC metrics and filtering")
+  sc.pp.calculate_qc_metrics(adata, 
+                             qc_vars=["mt"], 
+                             inplace=True, percent_top=[20], 
+                             log1p=True)
+
+
+  adata.obs["counts_outlier"] = is_outlier(adata, "log1p_total_counts", 5)
+  adata.obs["genes_outlier"] = is_outlier(adata, "log1p_n_genes_by_counts", 5)
+  adata.obs["topgenes_outlier"] = is_outlier(adata, "pct_counts_in_top_20_genes", 5)
+  adata.obs["mito_outlier"] = is_outlier(adata, "pct_counts_mt", 3) | (adata.obs["pct_counts_mt"] > 8)
+  adata.obs["outlier"] = adata.obs["genes_outlier"] | adata.obs["genes_outlier"] | adata.obs["topgenes_outlier"] | adata.obs["mito_outlier"]
+  
+  adata = adata[~adata.obs["outlier"]].copy()
+  sc.pp.filter_genes(adata, min_cells=1)
+
+  print("Applying normalisations")
+  adata.layers["counts"] = adata.X.copy()
+
+  sc.pp.normalize_total(adata, target_sum=None)
+  sc.pp.log1p(adata)
+
+  return adata
+
+# our outlier detection function from before
+def is_outlier(adata, metric: str, nmads: int):
+  M = adata.obs[metric]
+  outlier = (M < np.median(M) - nmads * median_abs_deviation(M)) | (
+      np.median(M) + nmads * median_abs_deviation(M) < M
+  )
+  return outlier
+```
+
+We apply this function to each of our samples, looping through each of them based on our sample information DataFrame: 
+
+```{python}
+sample_info = pd.read_table("Data/sample_sheet.tsv")
+sample_info = sample_info.rename(columns={"Sample": "sample_id", 
+                                          "SampleName": "sample_name", 
+                                          "SampleGroup": "sample_group"})
+sample_info
+```
+
+To make it doable computationally, we restrict things to a few samples only: 
+
+```{python}
+# create a dictionary to hold all AnnData objects
+adata = dict.fromkeys(sample_info["sample_id"])
+
+# read all samples
+for sample in adata.keys():
+  print("Reading {}".format(sample))
+  adata[sample] = sc_preprocess(
+    "Data/CellRanger_Outputs/{}/outs/filtered_feature_bc_matrix/".format(sample),
+    h38_genes
+    )
+```
+
+Our next step is to combine all these separate objects into a single AnnData object, with information about the sample that each barcode comes from. 
+
+Before doing that, we will grab the gene metadata, which unfortunately gets lost when combining multiple AnnData objects (see [this post](https://discourse.scverse.org/t/loosing-anndata-var-layer-when-using-sc-concat/1605) for details).
+
+```{python}
+# grab all var DataFrames from our dictionary
+all_var = [x.var for x in adata.values()]
+# concatenate them
+all_var = pd.concat(all_var, join="outer")
+# we keep only some columns of interest
+all_var = all_var[["gene_ids", "gene_name", "chrom"]]
+# remove duplicates
+all_var = all_var[~all_var.duplicated()]
+```
+
+Now we have all the gene metadata, we proceed with combining all these objects together using scanpy's concatenation function:
+
+```{python}
+adata = sc.concat(adata, join="outer", label="sample_id", index_unique="-")
+```
+
+After concatenation, we can add back the gene metadata that we collected earlier: 
+
+```{python}
+adata.var = all_var.loc[adata.var_names]
+```
+
+And we add the information about our samples to the cells' metadata:
+
+```{python}
+adata.obs = (
+  adata.obs
+  .merge(sample_info, how="left", on="sample_id")
+  .set_axis(adata.obs.index)
+)
+```
+
+Note we used `.set_axis(adata.obs.index)` to ensure we retained the rowname indexes of the table as the original (i.e. the barcode names). 
+If we don't do this, it will generate an invalid anndata object. 
+
+Finally, with the full data merged, we save this object for downstream analysis: 
+
+```{python}
+#| eval: false
+os.makedirs("results/scanpy")
+adata.write("results/scanpy/caron_filtered_full.hdf5")
+```
+
+```{python}
+#| echo: false
+#| eval: false
+
+# We saved these objects for participants
+os.makedirs("preprocessed/scanpy")
+adata.write("preprocessed/scanpy/caron_filtered_full.hdf5")
+
+# downsample 500 cells for computational efficiency downstream
+barcodes = (
+  adata.obs
+  .groupby('sample_name')
+  .sample(500, random_state=42) # random seed for reproducibility
+  .index.get_level_values(0)
+  .tolist()
+)
+
+adata500 = adata[barcodes, :]
+adata500.write("preprocessed/scanpy/caron_filtered_500.hdf5")
+```
+
+We are now ready for our downstream analysis in part II. 
+

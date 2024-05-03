@@ -1,0 +1,11 @@
+name: scverse
+channels: 
+  - conda-forge
+  - bioconda
+dependencies:
+  - scanpy==1.10.1
+  - pybiomart==0.2.0
+  - scikit-misc==0.1.4
+  - python==3.11.9 # this version needed for scikit-misc
+  - nb_conda_kernels==2.5.1 # for quarto render
+  - jupyter-cache==1.0.0 # for quarto caching
