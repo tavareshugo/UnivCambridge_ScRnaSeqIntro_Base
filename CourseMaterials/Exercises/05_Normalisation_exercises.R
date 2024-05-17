@@ -2,7 +2,7 @@
 
 # In the demonstration we ran the normalisation using just 500 cells per sample.
 # For this practical you will carry out normalisation, but this time using all
-# of the cells in one sample - ETV6_RUNX_1. Some of the commands will take a
+# of the cells in one sample - ETV6-RUNX_1. Some of the commands will take a
 # little longer to run this time.
 
 # load_packages 

@@ -13,7 +13,7 @@ output:
 
 In the demonstration we ran the normalisation using just 500 cells per sample.
 For this practical you will carry out normalisation, but this time using the 
-all of the cells in one sample - ETV6_RUNX_1. Some of the commands will take a
+all of the cells in one sample - ETV6-RUNX_1. Some of the commands will take a
 little longer to run this time.
 
 ```{r setup, echo=FALSE, message=FALSE, warning=FALSE, purl=FALSE}
@@ -47,7 +47,7 @@ to remove poor quality cells.
 sce <- readRDS("R_objects/Caron_filtered.full.rds")
 ```
 
-Now we need to extract just the cells for ETV6_RUNX_1.
+Now we need to extract just the cells for ETV6-RUNX_1.
 
 ```{r subset_data}
 etvr1 <- which(sce$SampleName=="ETV6-RUNX1_1")

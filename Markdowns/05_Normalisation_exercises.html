@@ -549,7 +549,7 @@ transformed data</a></li>
 Practical</h1>
 <p>In the demonstration we ran the normalisation using just 500 cells
 per sample. For this practical you will carry out normalisation, but
-this time using the all of the cells in one sample - ETV6_RUNX_1. Some
+this time using the all of the cells in one sample - ETV6-RUNX_1. Some
 of the commands will take a little longer to run this time.</p>
 <pre class="r"><code>library(scater)
 library(scran)
@@ -563,7 +563,7 @@ object</h2>
 <p>First we will load the full filtered data set. This data was
 previously filtered to remove poor quality cells.</p>
 <pre class="r"><code>sce &lt;- readRDS(&quot;R_objects/Caron_filtered.full.rds&quot;)</code></pre>
-<p>Now we need to extract just the cells for ETV6_RUNX_1.</p>
+<p>Now we need to extract just the cells for ETV6-RUNX_1.</p>
 <pre class="r"><code>etvr1 &lt;- which(sce$SampleName==&quot;ETV6-RUNX1_1&quot;)
 sce &lt;- sce[, etvr1]</code></pre>
 <div class="exercise">
