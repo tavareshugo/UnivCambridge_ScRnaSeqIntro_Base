@@ -111,27 +111,29 @@ p_before_nom
 The sparse nature of scRNA data makes normalization difficult, unlike bulk RNAseq data.
 
 * Broadly two classes
+
   1. Spike-in methods
-    * Uses pike-in controls for normalisation
-    * Not available for droplet based scRNA techniques like 10x.
+      * Uses spike-in controls for normalisation
+      * Not available for droplet based scRNA techniques like 10x.
+      
   2.  Non-spike-in methods: 
-    * Using available counts data for normalization
-    * DEseq2
-    * edgeR - TMM
-    * Library size normalization
-    * deconvolution
-    * sctransform 
+      * Using available counts data for normalization
+      * DEseq2
+      * edgeR - TMM
+      * Library size normalization
+      * deconvolution
+      * sctransform 
     
 * Typical normalization has two steps
   1. scaling
-    * Estimate size or scaling or normalization factor: computation of a cell-specific 'scaling' or 'size' factor or “normalization factor” that represents the relative bias in
+      * Estimate size or scaling or normalization factor: computation of a cell-specific 'scaling' or 'size' factor or “normalization factor” that represents the relative bias in
 that cell and division of all counts for the cell by that factor to remove that
 bias. Assumption: any cell specific bias will affect genes the same way.
-    * Scale the data by dividing the count for each gene with the appropriate size factor for that cell
+      * Scale the data by dividing the count for each gene with the appropriate size factor for that cell
   2. Transformation
-    * log2
-    * Square root transformation
-    * Pearson residuals (eg. sctransform)
+      * log2
+      * Square root transformation
+      * Pearson residuals (eg. sctransform)
     
 
 Scaling methods typically generate normalised counts-per-million (CPM) or
@@ -145,6 +147,8 @@ sparse scRNA-seq data.
 
 
 ![DESeq,edgeR and Library size normalizations](./Images/size_factors_plot.png)
+
+
 * DEseq, edgeR-TMM and Library size normalization initially developed for bulk RNAseq
 * Applying these methods on scRNAseq data systematically under or over estimate size factors. i.e systematically deviate from true size factors.
 * This deviation is the result of removing zeroes prior to normalization. 

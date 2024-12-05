@@ -1,7 +1,7 @@
 ---
 title: "Introduction to single-cell RNA-seq analysis - Normalisation"
 author: "Chandra Chilamakuri and Stephane Ballereau and Adam Reid"
-date: "25/01/2023"
+date: "05/12/2024"
 output:
   ioslides_presentation:
     widescreen: yes
@@ -59,29 +59,27 @@ allowing meaningful comparison of expression profiles between cells.
 
 ## Depth bias
 
-Consider two genes A:B, in two cells types, blue and green.
+Depth bias: Read differences between cells
 
-We normalize here by dividing UMI counts for each gene by the total UMI counts in a cell and multiplying by 100. 
-
-```{r echo=FALSE, out.width='60%', fig.align='center'}
-knitr::include_graphics('Images/norm_slides_depth_bias.png')
+```{r echo=FALSE, out.width='70%', fig.align='center'}
+knitr::include_graphics('Images/normalisation_toy_example.png')
 ```
-
-There is no differential expression, we have just sequenced twice as much in the second cell type.
 
 Simple library size normalization accounts for the depth bias
 
 ## Composition bias
 
-Consider three genes A:B:C, in two cell types.
+* Few genes contribute to most read counts
+* In this example, the total read counts are the same across the cells
+* Gene 1 contributes 80% of reads in cell2, leaving other genes with fewer read counts.
 
 ```{r echo=FALSE, out.width='60%', fig.align='center'}
-knitr::include_graphics('Images/norm_slides_composition_bias.png')
+knitr::include_graphics('Images/composition_bias.jpg')
 ```
 
-Just one gene is DE but library size normalization makes all look differentially expressed after normalisation
+* Library size normalization can not correct composition bias.
 
-The deconvolution approach will we use takes account of both depth and compositions biases
+* The deconvolution approach will we use takes account of both depth and compositions biases
 
 ## Mean-variance correlation
 
