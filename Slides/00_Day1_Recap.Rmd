@@ -1,8 +1,9 @@
 ---
 title: "Day 1 Recap"
-author: ""
-date: "21/09/2022"
+author: ''
+date: "05/12/2024"
 output:
+  beamer_presentation: default
   ioslides_presentation:
     widescreen: true
     smaller: true
@@ -24,7 +25,7 @@ knitr::include_graphics('Images/workflow2.png')
 * cells: Bone Marrow Mononuclear cells (BMMCs)
   * 12 samples 
   * 4 Sample groups
-    * HHD: The high hyper diploid cases. 
+    * HHD: The high hyper diploid cases (51–67 chromosomes). 
       * Two replicates.
     * PBMMC: healthy pediatric BMMC. 
       * Four replicates.
@@ -47,9 +48,12 @@ for each "read".
 * **UMI** - identifies the transcript molecule within a cell and gene
 * **insert** - the transcript molecule
 
+
 ```{r echo=FALSE, out.width='60%', fig.align='center'}
 knitr::include_graphics('Images/tenxLibStructureV3dual2.png')
 ```
+
+
 
 
 ## Cell Ranger
@@ -57,6 +61,7 @@ knitr::include_graphics('Images/tenxLibStructureV3dual2.png')
 * 10x Cell Ranger -  This not only carries out the alignment and feature
   counting, but will also:
     * Call cells
+    * Generates counts matrix
     * Generate a summary report in html format
     * Generate a "cloupe" file
 
@@ -82,7 +87,7 @@ cellranger count --id={OUTPUT_SAMPLE_NAME} \
 
 The contents of the `outs` directory are:
 
-```{r outputDirOuts, fig.align='center', out.width="50%"}
+```{r outputDirOuts, echo=FALSE, fig.align='center', out.width="75%"}
 knitr::include_graphics("Images/CellRangerOutputOuts.png")
 ```
 
