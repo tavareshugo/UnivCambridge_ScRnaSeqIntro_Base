@@ -457,7 +457,7 @@ are to one another versus how closely related cells in the cluster are to cells
 in other clusters. This allows us to assess cluster separation.
 
 For each cell in the cluster we calculate the the average distance to all other
-cells in the cluster and the average distance to all cells not in the cluster.
+cells in the cluster and the average distance to all cells in the next closest cluster.
 The cells silhouette width is the difference between these divided by the
 maximum of the two values. Cells with a large silhouette are strongly related to
 cells in the cluster, cells with a negative silhouette width are more closely
