@@ -5,6 +5,8 @@
 This page provides an index for the iterations we ran for this course. 
 We recommend looking at the latest iteration, if you want the most up-to-date version of our content.
 
+- [February 2025](https://bioinformatics-core-shared-training.github.io/SingleCell_RNAseq_Feb25/)
+- [December 2024](https://bioinformatics-core-shared-training.github.io/SingleCell_RNASeq_Dec24/)
 - [May 2024](https://bioinformatics-core-shared-training.github.io/SingleCell_RNASeq_May24/)
 - [January 2024](https://bioinformatics-core-shared-training.github.io/SingleCell_RNASeq_Jan24/)
 - [September 2023](https://bioinformatics-core-shared-training.github.io/SingleCell_RNASeq_Sept23/)
