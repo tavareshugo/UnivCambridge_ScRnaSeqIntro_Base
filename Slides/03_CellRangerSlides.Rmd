@@ -11,9 +11,35 @@ output:
 
 ## Single Cell RNAseq Analysis Workflow
 
-```{r echo=FALSE, out.width='70%', fig.align='center'}
+<div style="display: flex; justify-content: center; margin-top: -120px;">
+  <img src="https://learn.gencore.bio.nyu.edu/wp-content/uploads/2018/01/scRNA-overview.jpg" 
+      style="width: 720px; height: auto; clip-path: inset(20% 0% 0% 0%);">
+</div>
+
+Image by [Stephanie Hicks](https://speakerdeck.com/stephaniehicks/welcome-to-the-world-of-single-cell-rna-sequencing?slide=3) via [learn.gencore.bio.nyu.edu](https://learn.gencore.bio.nyu.edu/single-cell-rnaseq/)
+
+## Single Cell RNAseq Analysis Workflow
+
+```{r eval=FALSE, echo=FALSE, out.width='70%', fig.align='center'}
 knitr::include_graphics('Images/workflow2.png')
-```
+``` 
+
+<div style="position: relative; display: flex; justify-content: center; margin-top: -20px;">
+  <img src="Images/workflow2.png" style="width: 650px; height: auto;">
+  
+  <!-- Rectangle Overlay -->
+  <div style="position: absolute; top: -5px; left: 155px; width: 270px; height: 220px; 
+              border: 3px solid red; background: rgba(255, 0, 0, 0);"></div>
+</div>
+
+## 10x single-cell isolation
+
+<div style="display: flex; justify-content: center; margin-top: -10px;">
+  <img src="https://cdn.10xgenomics.com/image/upload/v1709930681/blog/GEM-X%20Launch%20blog/Figure_1.png" 
+      style="width: 720px; height: auto">
+</div>
+
+Image by [10x Genomics](https://www.10xgenomics.com/blog/the-next-generation-of-single-cell-rna-seq-an-introduction-to-gem-x-technology)
 
 ## 10x library file structure
 
@@ -45,9 +71,14 @@ knitr::include_graphics('Images/tenxLibStructureV3dual2.png')
 
 ## QC of Raw Reads - FASTQC
 
-```{r echo=FALSE, out.width='60%', fig.align='center'}
+```{r eval=FALSE, echo=FALSE, out.width='60%', fig.align='center'}
 knitr::include_graphics('Images/fastqcTop.png')
 ```
+
+<div style="display: flex; justify-content: center; margin-top: -10px;">
+  <img src="https://www.bioinformatics.babraham.ac.uk/projects/fastqc/fastqc.png" 
+      style="width: 600px; height: auto">
+</div>
 
 ## QC of Raw Reads - MultiQC - General Statistics
 
@@ -88,9 +119,17 @@ Alternative methods include:
 
 ## Obtaining Cell Ranger {#less_space_after_title}
 
-```{r echo=FALSE, out.width='70%', fig.align='center'}
+```{r eval=FALSE, echo=FALSE, out.width='60%', fig.align='center'}
 knitr::include_graphics('Images/CellRangerWebsite.png')
 ```
+
+<div style="display: flex; justify-content: center; margin-top: -50px;">
+  <img src="Images/CellRangerWebsite.png" 
+      style="width: 600px; height: auto">
+</div>
+<br>
+<br>
+Setup instructions given in the course materials homepage. 
 
 ## Cell Ranger tools
 
@@ -125,15 +164,32 @@ the genome and transcriptome of interest to be provided in a specific format.
 * Obtain from the 10x website for human or mouse (or both - PDX)
 * Build a custom reference with `cellranger mkref`
 
+```bash
+cellranger mkref \
+  --fasta={GENOME FASTA} \
+  --genes={ANNOTATION GTF} \
+  --genome={OUTPUT FOLDER FOR INDEX} \
+  --nthreads={CPUS}
+```
+
 ## Running `cellranger count`
 
 * Computationally very intensive
 * High memory requirements
 
-```{r echo=FALSE, out.width='70%', fig.align='center'}
+```{r eval=FALSE, echo=FALSE, out.width='70%', fig.align='center'}
 knitr::include_graphics('Images/CellRangerCommand.png')
 ```
 
+```bash
+cellranger count \
+  --id={OUTPUT_SAMPLE_NAME} \
+  --transcriptome={DIRECTORY_WITH_REFERENCE} \
+  --fastqs={DIRECTORY_WITH_FASTQ_FILES} \
+  --sample={NAME_OF_SAMPLE_IN_FASTQ_FILES} \
+  --localcores={NUMBER_OF_CPUS} \
+  --localmem={RAM_MEMORY}
+```
 
 ## Cell Ranger outputs
 
@@ -187,9 +243,23 @@ knitr::include_graphics('Images/CellRangerOutputOuts_countsraw.png')
 
 ## Cell Ranger outputs
 
-```{r echo=FALSE, out.width='70%', fig.align='center'}
+```{r eval=FALSE, echo=FALSE, out.width='70%', fig.align='center'}
 knitr::include_graphics('Images/CellRangerOutputOutsMatrix.png')
 ```
+
+Two types of outputs: 
+
+* Text-based files: `.tsv` and `.mtx`
+* HDF5 files: `.h5`
+
+Both of these can be read by standard scRNA-seq analysis packages and contain data for a 
+<br>
+**unique molecular identified (UMI) count matrix**:
+
+<div style="display: flex; justify-content: center; margin-bottom: -50px;">
+  <img src="https://hbctraining.github.io/scRNA-seq/img/count_matrix2.png" 
+      style="width: 200px; height: auto">
+</div>
 
 ## Cell Ranger outputs
 
@@ -205,6 +275,14 @@ knitr::include_graphics('Images/BarcodeRankPlot.png')
 
 ## Single Cell RNAseq Analysis Workflow
 
-```{r echo=FALSE, out.width='70%', fig.align='center'}
+```{r eval=FALSE, echo=FALSE, out.width='70%', fig.align='center'}
 knitr::include_graphics('Images/workflow2.png')
 ```
+
+<div style="position: relative; display: flex; justify-content: center; margin-top: -20px;">
+  <img src="Images/workflow2.png" style="width: 650px; height: auto;">
+  
+  <!-- Rectangle Overlay -->
+  <div style="position: absolute; top: -5px; left: 155px; width: 270px; height: 220px; 
+              border: 3px solid red; background: rgba(255, 0, 0, 0);"></div>
+</div>
