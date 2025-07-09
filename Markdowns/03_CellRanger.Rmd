@@ -4,6 +4,8 @@ subtitle: 'Alignment and feature counting with Cell Ranger'
 output:
   html_document:
     toc: yes
+    toc_float: true
+    toc_depth: 2
     number_sections: true
     css: ../css/boxes.css
 ---
@@ -237,11 +239,12 @@ e.g. for a single sample in the Caron data set we have:
 
 ### Running `cellranger count`
 
-The minimum information require to run `cellranger count` is:
+The minimum information required to run `cellranger count` is:
 
 * **\-\-id** - A sample ID. This is used for naming the outputs   
 * **\-\-transcriptome** - the directory containing the Cell Ranger reference   
 * **\-\-fastqs** - the directory containing the fastq files
+* **--create-bam <true/false>** - indicate whether or not we want a BAM alignment file to be saved. Unless you have a reason to keep the BAM files, it's often not worth the extra disk space they take up, so you can set this to `false` in your analysis. We'll set it to `true` for demonstration purposes. 
 
 This will process all fastq files in the `--fastqs` directory into a single
 sample. If you have multiple samples in a single directory then you need to
@@ -265,7 +268,8 @@ cellranger count --id={OUTPUT_SAMPLE_NAME} \
                  --fastqs={DIRECTORY_WITH_FASTQ_FILES} \
                  --sample={NAME_OF_SAMPLE_IN_FASTQ_FILES} \
                  --localcores={NUMBER_OF_CPUS} \
-                 --localmem={RAM_MEMORY}
+                 --localmem={RAM_MEMORY} \
+                 --create-bam={true/false}
 ```
 
 :::exercise 
@@ -307,7 +311,8 @@ cellranger count \
   --fastqs=<<_DIRECTORY_WITH_FASTQ_FILES_>> \
   --sample=<<_NAME_OF_SAMPLE_IN_FASTQ_FILES_>> \
   --localcores=8 \
-  --localmem=24
+  --localmem=24 \
+  --create-bam=true
 ```
 
 Note that we have to write the paths relative to the results folder we create within the script. 
@@ -329,7 +334,8 @@ cellranger count \
   --fastqs=Data/fastq/ \
   --sample=SRR9264343 \
   --localcores=8 \
-  --localmem=24
+  --localmem=24 \
+  --create-bam=true
 ```
 
 If we save this script in our `scripts` folder as `02-cellranger.sh`, we could then run it from the terminal with:
