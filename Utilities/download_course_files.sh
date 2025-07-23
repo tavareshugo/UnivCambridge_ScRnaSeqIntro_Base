@@ -6,7 +6,7 @@
 #####################################################################################
 
 # Download latest data from dropbox
-wget -O course_files.zip https://www.dropbox.com/sh/s79ttds7px190xu/AAAjHzirFkfik1i08Gh26uU_a?dl=1
+wget -O course_files.zip "https://www.dropbox.com/scl/fo/9x1rg6qxqw5crq2vtb1ho/AMawguf1kqRYQQs-qZPhFZA?rlkey=6y4w1skyjzpq36zfyocis24t6&st=yyv0kusl&dl=1"
 
 # unzip
 mkdir -p course_files

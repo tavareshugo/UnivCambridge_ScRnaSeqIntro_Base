@@ -194,7 +194,7 @@ Asking for an unqualified “best” clustering is akin to asking for the best m
 
 
 ```{r, echo=FALSE, out.height='20%', out.width = '20%', out.extra='style="float:right; padding:10px"'}
-knitr::include_graphics("Images/microscope.jpg", auto_pdf = TRUE)
+knitr::include_graphics("https://upload.wikimedia.org/wikipedia/commons/5/53/Fine_rotative_table_Microscope_5_%2812996283235%29.jpg", auto_pdf = TRUE)
 ```
 
 A more relevant question is “how well do the clusters approximate the cell types or states of interest?”. Do you want:

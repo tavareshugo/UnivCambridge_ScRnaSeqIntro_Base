@@ -5,10 +5,18 @@ subtitle: Differencial Expression and Abundance
 output:
   html_document:
     toc: yes
+    toc_float: true
+    toc_depth: 2
     number_sections: true
-    code_folding: show 
     css: ../css/boxes.css
+    includes:
+      in_header: ../css/navbar.html
 ---
+
+```{r setup_wd}
+knitr::opts_knit$set(root.dir = here::here("course_files"))
+```
+
 ```{r setup, echo=FALSE, include=FALSE, message=FALSE, purl=FALSE}
 library(scater)
 library(scran)
@@ -289,7 +297,6 @@ summarizeTestsPerLabel(is.de)
 
 
 For each gene, we compute the percentage of labels in which that gene is upregulated or downregulated. (Here, we consider a gene to be non-DE if it is not retained after filtering.).
-
 
 ```{r upregulated_genes}
 
@@ -814,7 +821,7 @@ hvgs <- getTopHVGs(dec, n=2000)
 head(hvgs)
 ```
 
-We run findNhoodGroupMarkers to test for one-vs-all differential gene expression for each neighbourhood group
+We run findNhoodGroupMarkers to test for one-vS-all differential gene expression for each neighbourhood group
 
 ```{r get_neighbourhood_group_markers, message=FALSE}
 set.seed(42)

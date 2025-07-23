@@ -8,7 +8,13 @@ output:
     toc_depth: 2
     number_sections: true
     css: ../css/boxes.css
+    includes:
+      in_header: ../css/navbar.html
 ---
+
+```{r setup_wd}
+knitr::opts_knit$set(root.dir = here::here("course_files"))
+```
 
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(echo=FALSE)
@@ -360,15 +366,15 @@ files/directories that will not be of immediate interest.
 
 The contents of the sample directory will look like this:
 
-```{r outputDir, fig.align='center', out.width="50%"}
-knitr::include_graphics("Images/CellRangerOutput.png")
-```
+<div style="text-align: center;">
+  <img src="Images/CellRangerOutput.png" alt="Cell Ranger Output Directory" style="width:50%;">
+</div>
 
 The contents of the `outs` directory are:
 
-```{r outputDirOuts, fig.align='center', out.width="50%"}
-knitr::include_graphics("Images/CellRangerOutputOuts.png")
-```
+<div style="text-align: center;">
+  <img src="Images/CellRangerOutputOuts.png" alt="Cell Ranger Output Directory - outs" style="width:50%;">
+</div>
 
 * **analysis** - The results of clustering and differential expression analysis
   on the clusters. These are used in the *web_summary.html* report.
@@ -423,9 +429,9 @@ The `cloupe.cloupe` file that Cell Ranger generates can be loaded using the
 visualization and analysis platform that allows you to extensively explore your
 data with a point and click interface.
 
-```{r LoupeBrowser, fig.align='center', out.width="75%"}
-knitr::include_graphics("Images/LoupeBrowser.png")
-```
+<div style="text-align: center;">
+  <img src="Images/LoupeBrowser.png" alt="Loupe Browser Screenshot" style="width:75%;">
+</div>
 
 The browser will allow you, for example, to find cells of interest through
 filtering and clustering tools, identify genes whose expression characterizes

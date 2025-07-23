@@ -4,10 +4,18 @@ author: "Adam Reid, Gurdon Institute, University of Cambridge"
 date: '2023-01-10'
 output:
   html_document:
-    toc: true
+    toc: yes
     toc_float: true
+    toc_depth: 2
     number_sections: true
+    css: ../css/boxes.css
+    includes:
+      in_header: ../css/navbar.html
 ---
+
+```{r setup_wd}
+knitr::opts_knit$set(root.dir = here::here("course_files"))
+```
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)

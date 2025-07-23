@@ -5,10 +5,17 @@ subtitle: Clustering
 output:
   html_document:
     toc: yes
+    toc_float: true
+    toc_depth: 2
     number_sections: true
-    code_folding: show 
     css: ../css/boxes.css
+    includes:
+      in_header: ../css/navbar.html
 ---
+
+```{r setup_wd}
+knitr::opts_knit$set(root.dir = here::here("course_files"))
+```
 
 ```{r setup, echo=FALSE, message=FALSE, warning=FALSE, purl=FALSE}
 library(knitr)
@@ -484,9 +491,9 @@ plotSilBeeswarm <- function(silDat){
     mutate(closestCluster = ifelse(width > 0, cluster, other) %>% factor())
   
   plt <- silTab %>% 
-      ggplot(aes(x=cluster, y=width, colour=closestCluster)) +
-        ggbeeswarm::geom_quasirandom(method="smiley", alpha=0.6) +
-        theme_bw()
+    ggplot(aes(x=cluster, y=width, colour=closestCluster)) +
+    ggbeeswarm::geom_quasirandom(method="smiley", alpha=0.6) +
+    theme_bw()
   
   plt <- scater:::.resolve_plot_colours(plt, silTab$closestCluster, "closestCluster", colour = TRUE)
   plt
